@@ -1,0 +1,44 @@
+// Takes screenshots of every screen (desktop + phone, light + dark) for checking by eye.
+import fs from 'node:fs';
+import {chromium} from 'playwright';
+const BASE = process.env.BASE || 'http://localhost:3100';
+const OUT = process.env.SHOTS || '/tmp/vis'; fs.rmSync(OUT, {recursive: true, force: true}); fs.mkdirSync(OUT, {recursive: true});
+const b = await chromium.launch();
+const errs = [];
+async function run(name, vp, cookie){
+  const ctx = await b.newContext({viewport: vp, deviceScaleFactor: 1, hasTouch: vp.width < 500});
+  if (cookie) await ctx.addCookies([{name: 'noor_settings', value: encodeURIComponent(JSON.stringify(cookie)), url: BASE}]);
+  await ctx.route(/cdn\.jsdelivr\.net/, r => r.fulfill({body: ''}));
+  const wav = fs.readFileSync(new URL('./silence.wav', import.meta.url));
+  await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
+  const p = await ctx.newPage();
+  p.on('pageerror', e => errs.push(name + ': ' + e.message));
+  const go = async u => { await p.goto(BASE + u); await p.waitForLoadState('networkidle', {timeout: 8000}).catch(() => {}); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(400); };
+  const shot = async n => { await p.screenshot({path: `${OUT}/${name}-${n}.png`}); };
+  await go('/'); await shot('home');
+  await go('/surah/1'); await shot('surah1');
+  await p.locator('#a-1-2 .w').first().click(); await p.waitForSelector('#wcard [data-wc=say]'); await p.waitForTimeout(300); await shot('word');
+  await p.keyboard.press('Escape');
+  await p.click('#a-1-2 [data-act=tafsir]'); await p.waitForSelector('#tafDrawer .tafsir'); await p.waitForTimeout(500); await shot('tafsir');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  await p.click('#setBtn'); await p.waitForSelector('input[value="en.pickthall"]'); await p.waitForTimeout(400); await shot('settings'); await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  await p.click('#a-1-3 [data-act=play]'); await p.waitForSelector('#player'); await p.click('#plRep'); await p.waitForTimeout(200); await shot('player');
+  await go('/surah/112'); await shot('surah112');
+  await go('/mushaf/2'); await shot('mushaf');
+  await go('/tafseer/1/2'); await shot('tafpage');
+  await go('/videos/1/2'); await shot('videos');
+  await go('/search?q=mercy'); await shot('search');
+  await go('/quiz'); await shot('quizlist');
+  await go('/quiz/1/1'); await shot('quiz');
+  await go('/juz/1'); await shot('juz');
+  await ctx.close();
+}
+const D = {width: 1366, height: 860}, M = {width: 390, height: 844};
+await run('d-light', D, {palette: 'midnight', theme: 'light'});
+await run('d-dark', D, {palette: 'midnight', theme: 'dark'});
+await run('d-ocean', D, {palette: 'ocean', theme: 'light', tajweed: true});
+await run('d-classic-ip-wbw', D, {palette: 'classic', theme: 'light', script: 'indopak', wbw: true});
+await run('m-light', M, {palette: 'midnight', theme: 'light'});
+await run('m-dark-wbw', M, {palette: 'midnight', theme: 'dark', wbw: true, tajweed: true});
+console.log(errs.length ? errs.join('\n') : 'no page errors');
+await b.close();
