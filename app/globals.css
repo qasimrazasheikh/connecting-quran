@@ -83,9 +83,11 @@
   --shadow-card: var(--shadow);
 }
 
-/* Indo-Pak Quran font (linked from quran.com's public repo, not redistributed) */
+/* Indo-Pak Quran font: the same face and sources quran.com declares (src/styles/fonts.scss), linked from their public repo, not redistributed */
 @font-face{font-family:"IndoPak Nastaleeq";font-display:swap;
-  src:url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2") format("woff2"),
+  src:local("AlQuran IndoPak by QuranWBW"),
+      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2") format("woff2"),
+      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff") format("woff"),
       url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.ttf") format("truetype")}
 
 @layer base{

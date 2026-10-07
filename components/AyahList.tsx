@@ -16,7 +16,7 @@ function AyahCard({ay, meta}: {ay: AyahView; meta: ViewMeta}) {
   const {settings, bookmarks, toggleBookmark, openTafsir, toast} = useApp();
   const {cur, playing, toggle} = usePlayer();
   const key = `${ay.s}:${ay.a}`, isCur = cur === key, bm = bookmarks.some(b => b.k === key);
-  const copy = () => copyText([ay.ar, ...ay.trans.map(t => t.text)].join('\n\n') + `\n\n(Quran ${key})`, 'Ayah copied', toast);
+  const copy = () => copyText([ay.copy, ...ay.trans.map(t => t.text)].join('\n\n') + `\n\n(Quran ${key})`, 'Ayah copied', toast);
   const link = () => copyText(`${location.origin}/surah/${ay.s}/${ay.a}`, 'Link copied', toast);
   return (
     <article id={`a-${ay.s}-${ay.a}`} data-key={key} data-s={ay.s} data-a={ay.a}

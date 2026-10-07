@@ -72,7 +72,7 @@ export default function WordCard() {
       className="fixed z-45 max-h-[min(70vh,560px)] w-[min(380px,calc(100%-16px))] overflow-auto rounded-[14px] border border-line bg-surface p-3.5 shadow-[0_12px_40px_rgba(0,0,0,.22)] max-[760px]:inset-x-2 max-[760px]:bottom-2 max-[760px]:max-h-[65vh] max-[760px]:w-auto">
       <div className="flex items-start gap-2.5">
         <div className="min-w-0 flex-1">
-          <div className="font-ar text-[38px] leading-normal text-brand" dir="rtl">{word.text}</div>
+          <div className="font-ar text-[38px] leading-normal text-brand" dir="rtl" style={word.font ? {fontFamily: word.font} : undefined}>{word.text}</div>
           {info?.translit && <div className="text-sm italic text-muted">{info.translit}</div>}
         </div>
         <button className={iconBtn} aria-label="Close" onClick={closeWord}><Icon.x /></button>

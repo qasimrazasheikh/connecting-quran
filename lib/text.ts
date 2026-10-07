@@ -10,6 +10,18 @@ export function stripBismillah(text: string, surah: number, ayah: number) {
 export const cleanIP = (t: string) => String(t || '')
   .replace(/[​‎‏﻿]/g, '').replace(/[  ]/g, ' ')
   .replace(/[٘ࣔ-࣢]/g, '').replace(/ {2,}/g, ' ').trim();
+/**
+ * Indo-Pak text for the clipboard: quran.com draws some marks with private-use characters only its Indo-Pak font has
+ * (other apps show them as boxes). Map the alternate vowel forms back to standard Unicode and drop the font-only
+ * waqf signs (ز ص ق قف وقفة, small-circle stop) and the rukuh ع, which have no standard Unicode equivalent.
+ */
+/** quran.com's Indo-Pak Nastaleeq text ends each ayah with a token the font draws as the ayah-end marker (۟ + number glyph + waqf signs). */
+export const IP_END = /^۟/;
+/** Text without that ayah-end token (e.g. the Bismillah shown above a surah). */
+export const ipBody = (t: string) => String(t || '').replace(/\s*۟\S*$/, '').trim();
+export const plainIP = (t: string) => String(t || '')
+  .replace(//g, 'ٖ').replace(//g, 'ٗ').replace(/ﺎ/g, 'ا')
+  .replace(/ ?[-]/g, '').replace(/ {2,}/g, ' ').trim();
 
 export type Seg = {c?: string; t: string};
 export type Tok = {text: string; segs: Seg[]};
@@ -40,7 +52,9 @@ export type QWord = {text_indopak?: string; translation?: {text?: string}; trans
 export function buildWords(tokens: Tok[], ref: string | null, words: QWord[] | null, ipMode: boolean, wbw: boolean): WordItem[] {
   const letterIdx = tokens.map((t, i) => HAS_LETTER.test(t.text) ? i : -1).filter(i => i >= 0);
   let groups: number[][] | null = null;
-  if (words && ipMode){
+  // regroup only when the Indo-Pak text splits words differently (the word list's text_indopak is the legacy edition,
+  // so its split only helps there; the Nastaleeq edition almost always has one token per word)
+  if (words && ipMode && ref && wordCount(ref) !== letterIdx.length){
     const sizes = words.map(w => Math.max(1, wordCount(cleanIP(w.text_indopak || ''))));
     if (sizes.reduce((x, y) => x + y, 0) === letterIdx.length){ let k = 0; groups = sizes.map(n => letterIdx.slice(k, k += n)); }
   }

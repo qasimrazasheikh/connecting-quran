@@ -42,14 +42,21 @@ export async function getAyahEditions(s: number, a: number, ids: string[]): Prom
   return (await getJSON<{data: (CloudAyah & {edition: {identifier: string}})[]}>(`${API.quranCloud}/ayah/${s}:${a}/editions/${ids.join(',')}`)).data;
 }
 
-/** Indo-Pak text: quran.com (matches the Indo-Pak font). Backup: fawazahmed0 quran-api. Returns map "s:a" -> text. */
+/**
+ * Indo-Pak text from quran.com. Backup: fawazahmed0 quran-api. Returns map "s:a" -> text.
+ * `nastaleeq` (default) is the edition quran.com's reader shows with the Indo-Pak font: Urdu-style spelling, and each ayah
+ * ends with the font's own ayah-end token (۟ + number glyph + waqf/rukuh signs). Many of its marks, and a few letters and
+ * words, are private-use glyphs, so it can't be copied; `legacy` (text_indopak) is plain enough to copy (see plainIP).
+ */
 export type IPKind = 'chapter' | 'juz' | 'page' | 'verse';
-export async function getIndoPak(kind: IPKind, id: string | number): Promise<Record<string, string>> {
+export type IPEdition = 'nastaleeq' | 'legacy';
+export async function getIndoPak(kind: IPKind, id: string | number, edition: IPEdition = 'nastaleeq'): Promise<Record<string, string>> {
   const q = {chapter: `chapter_number=${id}`, juz: `juz_number=${id}`, page: `page_number=${id}`, verse: `verse_key=${id}`}[kind];
+  const field = edition === 'nastaleeq' ? 'text_indopak_nastaleeq' : 'text_indopak';
   try{
-    const d = await getJSON<{verses: {verse_key: string; text_indopak: string}[]}>(`${API.quranCom}/quran/verses/indopak?${q}`);
+    const d = await getJSON<{verses: ({verse_key: string} & Record<string, string>)[]}>(`${API.quranCom}/quran/verses/${field.slice(5)}?${q}`);
     if (!d.verses?.length) throw new Error('empty');
-    return Object.fromEntries(d.verses.map(v => [v.verse_key, cleanIP(v.text_indopak)]));
+    return Object.fromEntries(d.verses.map(v => [v.verse_key, cleanIP(v[field])]));
   }catch(e){
     if (kind === 'page') throw e;
     const url = kind === 'chapter' ? `${API.ipBackup}/${id}.json` : kind === 'juz' ? `${API.ipBackup}/juzs/${id}.json` : `${API.ipBackup}/${String(id).replace(':', '/')}.json`;

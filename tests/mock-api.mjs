@@ -43,13 +43,13 @@ http.createServer((req, res) => {
   if ((m = p.match(/^\/cloud\/search\/([^/]+)\/all\/(.+)$/))) { if (m[1] === 'nothing') return json(res, {code: 404, data: 'Nothing'}, 404);
     return json(res, {code: 200, data: {count: 120, matches: Array.from({length: 120}, (_, k) => ({text: `text with ${m[1]} inside ${k + 1}`, numberInSurah: k + 1, surah: {number: 2, englishName: 'Surah-2'}}))}}); }
   // ---- Quran.com (/qc = /api/v4)
-  if (p === '/qc/quran/verses/indopak'){
+  if ((m = p.match(/^\/qc\/quran\/verses\/(indopak|indopak_nastaleeq)$/))){
     let keys = [];
     if (q.get('page_number')) keys = pageKeys(+q.get('page_number'));
     else if (q.get('chapter_number')) { const n = +q.get('chapter_number'); keys = Array.from({length: COUNT(n)}, (_, k) => n + ':' + (k + 1)); }
     else if (q.get('juz_number')) keys = ['1:1', '1:2', '2:1', '2:2'];
     else keys = [q.get('verse_key')];
-    return json(res, {verses: keys.map(k => ({verse_key: k, text_indopak: (k === '1:1' ? 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ' : 'وَ هُوَ ' + ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '').split(' ').slice(1).join(' ')) + '​‏'}))});
+    return json(res, {verses: keys.map(k => ({verse_key: k, ['text_' + m[1]]: (k === '1:1' ? 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ' : 'وَ هُوَ ' + ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '').split(' ').slice(1).join(' ')) + '​‏'}))});
   }
   if ((m = p.match(/^\/qc\/verses\/by_(chapter|juz|page)\/(\d+)$/))) {
     const n = +m[2], keys = m[1] === 'chapter' ? Array.from({length: COUNT(n)}, (_, k) => n + ':' + (k + 1)) : m[1] === 'page' ? pageKeys(n) : ['1:1', '1:2', '2:1', '2:2'];

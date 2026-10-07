@@ -2,29 +2,33 @@
 import {BISM_UTH} from './meta';
 import {getIndoPak, getJuzEdition, getPageEdition, getSurahEditions, getSurahList, getTransEditions, getWords, transMeta, getAyahEditions, type CloudAyah} from './quran';
 import type {Settings} from './settings';
-import {buildWords, plainTokens, stripBismillah, tajweedTokens, type WordItem} from './text';
+import {buildWords, ipBody, plainIP, plainTokens, stripBismillah, tajweedTokens, type WordItem} from './text';
 
 export type TransText = {name: string; lang: string; dir: 'rtl' | 'ltr'; text: string};
-export type AyahView = {s: number; a: number; n: number; sname: string; ar: string; words: WordItem[]; trans: TransText[]; juz?: number; page?: number};
+export type AyahView = {s: number; a: number; n: number; sname: string; ar: string; copy: string; words: WordItem[]; trans: TransText[]; juz?: number; page?: number};
 export type ViewMeta = {ip: boolean; tajweed: boolean; bism: string; trans: {id: string; name: string}[]};
 
-async function ipText(kind: 'chapter' | 'juz' | 'page', id: number){
-  try{ return await getIndoPak(kind, id); }catch{ return null; }
+/** Indo-Pak text to show, plus the plainer edition for the clipboard (null if it could not load: copy falls back to Uthmani). */
+type IPTexts = {show: Record<string, string>; copy: Record<string, string> | null};
+async function ipText(kind: 'chapter' | 'juz' | 'page', id: number): Promise<IPTexts | null>{
+  const [show, copy] = await Promise.all([getIndoPak(kind, id).catch(() => null), getIndoPak(kind, id, 'legacy').catch(() => null)]);
+  return show ? {show, copy} : null;
 }
 async function bismFor(ip: boolean){
   if (!ip) return BISM_UTH;
-  try{ return (await getIndoPak('verse', '1:1'))['1:1'] || BISM_UTH; }catch{ return BISM_UTH; }
+  try{ return ipBody((await getIndoPak('verse', '1:1'))['1:1'] || '') || BISM_UTH; }catch{ return BISM_UTH; }
 }
-function makeAyahs(ar: CloudAyah[], tj: CloudAyah[] | null, ip: Record<string, string> | null, words: Map<string, import('./text').QWord[]> | null,
+function makeAyahs(ar: CloudAyah[], tj: CloudAyah[] | null, ip: IPTexts | null, words: Map<string, import('./text').QWord[]> | null,
                    trans: {meta: ReturnType<typeof transMeta>; ayahs: CloudAyah[]}[], st: Settings, sname?: (a: CloudAyah) => string): AyahView[] {
   return ar.map((ay, i) => {
     const s = ay.surah?.number, a = ay.numberInSurah, key = `${s}:${a}`;
     const ref = stripBismillah(ay.text, s, a);
-    const ipT = ip?.[key];
+    const ipT = ip?.show[key], ipC = ip?.copy?.[key];
     const toks = ipT ? plainTokens(ipT) : tj?.[i] ? tajweedTokens(tj[i].text, s, a) : plainTokens(ref);
     return {
       s, a, n: ay.number, juz: ay.juz, page: ay.page, sname: sname ? sname(ay) : ay.surah.englishName,
       ar: ipT || ref,
+      copy: ipT && ipC ? plainIP(ipC) : ref,
       words: buildWords(toks, ref, words?.get(key) || null, !!ipT, st.wbw),
       trans: trans.map(t => ({...t.meta, text: t.ayahs[i]?.text || ''})),
     };

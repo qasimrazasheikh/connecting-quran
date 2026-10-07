@@ -6,7 +6,8 @@ import type {SurahInfo} from '@/lib/quran';
 
 export type Bookmark = {k: string; s: number; a: number; name: string; t: number};
 export type TafsirReq = {s: number; a: number; tab: 'text' | 'videos'} | null;
-export type WordReq = {s: number; a: number; w?: number; t?: number; text: string; rect: DOMRect; onAyah?: () => void} | null;
+/** `font`: the font family the tapped word was drawn in, so the card can draw it the same (Indo-Pak text has glyphs only its font has). */
+export type WordReq = {s: number; a: number; w?: number; t?: number; text: string; font?: string; rect: DOMRect; onAyah?: () => void} | null;
 
 type Ctx = {
   settings: Settings; update: (patch: Partial<Settings>) => void; surahs: SurahInfo[];

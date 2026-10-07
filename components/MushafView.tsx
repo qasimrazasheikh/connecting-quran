@@ -108,7 +108,7 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
           <button className={abtn} data-m="tafsir" onClick={() => { setMenu(null); openTafsir(menu.s, menu.a, 'text'); }}><Icon.book /><span className="max-sm:hidden">Tafseer</span></button>
           <button className={cx(abtn, mbm && '!text-accent')} data-m="bm" onClick={() => toggleBookmark(menu.s, menu.a)}>{mbm ? <Icon.markOn /> : <Icon.mark />}<span className="max-sm:hidden">{mbm ? 'Saved' : 'Bookmark'}</span></button>
           <button className={abtn} data-m="copy" onClick={() => { const ay = ayahs.find(x => x.s === menu.s && x.a === menu.a); setMenu(null);
-            navigator.clipboard.writeText(`${ay?.ar}\n\n(Quran ${mkey})`).then(() => toast('Ayah copied'), () => toast('Could not copy')); }}><Icon.copy /><span className="max-sm:hidden">Copy</span></button>
+            navigator.clipboard.writeText(`${ay?.copy}\n\n(Quran ${mkey})`).then(() => toast('Ayah copied'), () => toast('Could not copy')); }}><Icon.copy /><span className="max-sm:hidden">Copy</span></button>
           <button className={cx(abtn, 'font-semibold !text-yt')} data-m="videos" onClick={() => { setMenu(null); openTafsir(menu.s, menu.a, 'videos'); }}><Icon.yt /><span>Videos</span></button>
         </div>
       )}
