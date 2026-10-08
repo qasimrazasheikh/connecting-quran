@@ -9,7 +9,7 @@ export type Settings = {
 export const DEFAULT_SETTINGS: Settings = {
   trans: ['ur.jalandhry', 'en.sahih'],
   tafsirs: ['ur-tafseer-ibn-e-kaseer', 'ur-tafsir-bayan-ul-quran', 'en-tafisr-ibn-kathir', 'en-tafsir-maarif-ul-quran', 'qe-urdu-junagarhi'],
-  arSize: 32, trSize: 18, theme: 'auto', palette: 'midnight', showAr: true, script: 'uthmani',
+  arSize: 32, trSize: 18, theme: 'auto', palette: 'midnight', showAr: true, script: 'indopak',
   reciter: 'ar.alafasy', autoPlay: true, autoScroll: true, wbw: false, wbwLang: 'ur', tajweed: false,
   wordSound: false, speed: 1, tafLayout: 'accordion', tafLast: '',
 };

@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation';
 import {useEffect} from 'react';
 import {useApp} from './AppProvider';
 import TafseerPanel from './TafseerPanel';
+import {navStart} from './NavProgress';
 import {arNum} from '@/lib/meta';
 import {IP_END} from '@/lib/text';
 import {stepAyah} from '@/lib/step';
@@ -16,7 +17,7 @@ export default function TafseerPage({s, a, tab, quote}: {s: number; a: number; t
   const {surahs, setTafTab} = useApp();
   useEffect(() => { setTafTab(tab); }, [tab, setTafTab]);
   const base = tab === 'videos' ? 'videos' : 'tafseer';
-  const go = (ss: number, aa: number) => router.push(`/${base}/${ss}/${aa}`);
+  const go = (ss: number, aa: number) => { const u = `/${base}/${ss}/${aa}`; navStart(u); router.push(u); };
   const step = (d: number) => { const p = stepAyah(surahs, s, a, d); if (p) go(p.s, p.a); };
   const count = surahs[s - 1]?.ayahs || a;
   return (

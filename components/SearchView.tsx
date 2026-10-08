@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useRef, useState} from 'react';
+import {navStart} from './NavProgress';
 import {highlight} from '@/lib/highlight';
 import type {SearchMatch} from '@/lib/quran';
 import {btn, btnGhost, cx, empty, rhead, sel} from '@/lib/ui';
@@ -16,7 +17,7 @@ export default function SearchView({q, scope, res, error}: {q: string; scope: st
   const [shown, setShown] = useState(50);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { setText(q); setSc(scope); setShown(50); if (!q) input.current?.focus(); }, [q, scope]);
-  const submit = (scopeV = sc) => { const v = text.trim(); if (v) router.push(`/search?q=${encodeURIComponent(v)}&scope=${scopeV}`); };
+  const submit = (scopeV = sc) => { const v = text.trim(); if (v){ const u = `/search?q=${encodeURIComponent(v)}&scope=${scopeV}`; navStart(u); router.push(u); } };
   const where = scope === 'ar' ? 'Arabic text' : scope === 'ur' ? 'the Urdu translation' : 'the English translation';
   const list = res?.matches || [];
   return (

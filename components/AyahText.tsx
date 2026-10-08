@@ -19,7 +19,8 @@ export default function AyahText({s, a, words, wbw, className, endmark = true, o
     <span className={cx('q-ar', wbw && 'wbw', className)}>
       {words.map((it, i) => {
         const sp = i ? ' ' : '';
-        if (it.k === 'x') return <Fragment key={i}>{sp}<TokView t={it.tok} /></Fragment>;
+        // non-breaking space: the ayah-end marker never wraps onto a line by itself
+        if (it.k === 'x') return <Fragment key={i}>{sp && IP_END.test(it.tok.text) ? ' ' : sp}<span className="wx"><TokView t={it.tok} /></span></Fragment>;
         const on = selN === it.n;
         return (
           <Fragment key={i}>{sp}<span className={cx('w', on && 'wsel')} {...(it.byToken ? {'data-t': it.n} : {'data-w': it.n})}

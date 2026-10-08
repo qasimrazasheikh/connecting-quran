@@ -67,7 +67,13 @@ export function buildWords(tokens: Tok[], ref: string | null, words: QWord[] | n
     if (startOf.has(i)){
       const n = startOf.get(i)!, g = groups![n], w = words && !byToken ? words[n] : null;
       out.push({k: 'w', n: n + 1, byToken: byToken || undefined, toks: g.map(j => tokens[j]), m: wbw && w?.translation?.text ? w.translation.text : undefined});
-    } else if (!inGroup.has(i)) out.push({k: 'x', tok: t});
+    } else if (!inGroup.has(i)){
+      // Indo-Pak waqf signs are separate tokens; keep each with the word before it (as quran.com does) so it sits over
+      // that word instead of floating between word boxes. The ayah-end marker stays on its own.
+      const prev = out[out.length - 1];
+      if (ipMode && prev?.k === 'w' && !IP_END.test(t.text)) prev.toks = [...prev.toks, t];
+      else out.push({k: 'x', tok: t});
+    }
   });
   return out;
 }

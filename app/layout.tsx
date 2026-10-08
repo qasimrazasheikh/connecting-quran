@@ -1,4 +1,5 @@
 import type {Metadata, Viewport} from 'next';
+import {Suspense} from 'react';
 // Fonts are bundled with the app (no Google Fonts request at run time)
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -13,6 +14,8 @@ import './globals.css';
 import AppProvider from '@/components/AppProvider';
 import PlayerProvider from '@/components/PlayerProvider';
 import Header from '@/components/Header';
+import Logo from '@/components/Logo';
+import NavProgress from '@/components/NavProgress';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import TafseerDrawer from '@/components/TafseerDrawer';
 import WordCard from '@/components/WordCard';
@@ -27,6 +30,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {width: 'device-width', initialScale: 1, themeColor: '#1b1d5e'};
 
 
+// First visit / reload: hide the boot screen once the page, its scripts and the fonts it uses have loaded (12 s at most)
+const BOOT_JS = `(function(){var d=document.documentElement,f=function(){d.classList.add('booted')},t=setTimeout(f,12000);
+new Promise(function(r){document.readyState==='complete'?r():addEventListener('load',r)})
+.then(function(){return document.fonts&&document.fonts.ready}).then(function(){clearTimeout(t);f()},f)})()`;
+
 export default async function RootLayout({children}: LayoutProps<'/'>) {
   const {settings, hasCookie} = await readSettings();
   let surahs: SurahInfo[] = [];
@@ -35,6 +43,11 @@ export default async function RootLayout({children}: LayoutProps<'/'>) {
     <html lang="en" data-palette={settings.palette} data-theme={settings.theme === 'auto' ? undefined : settings.theme}
       style={{'--ar-size': settings.arSize + 'px', '--tr-size': settings.trSize + 'px'} as React.CSSProperties} suppressHydrationWarning>
       <body className={settings.script === 'indopak' ? 'ip' : ''}>
+        {/* boot screen: plain HTML + CSS so it shows before any script on a slow connection */}
+        <div id="boot" aria-hidden><Logo className="size-14 rounded-2xl" svgClass="size-9" /><div className="spin" /><span>Loading…</span></div>
+        <noscript><style>{'#boot{display:none}'}</style></noscript>
+        <script dangerouslySetInnerHTML={{__html: BOOT_JS}} />
+        <Suspense fallback={null}><NavProgress /></Suspense>
         <AppProvider initial={settings} hasCookie={hasCookie} surahs={surahs}>
           <PlayerProvider>
             <Header />

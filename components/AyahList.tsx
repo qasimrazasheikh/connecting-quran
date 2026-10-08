@@ -1,9 +1,11 @@
 'use client';
 import Link from 'next/link';
 import {Fragment, useEffect, useMemo} from 'react';
-import {store, useApp} from './AppProvider';
+import {useApp} from './AppProvider';
+import {setLastRead} from './resume';
 import {usePlayer} from './PlayerProvider';
 import AyahText from './AyahText';
+import SurahName from './SurahName';
 import {Icon} from './Icons';
 import type {AyahView, ViewMeta} from '@/lib/views';
 import {abtn, cx} from '@/lib/ui';
@@ -53,8 +55,8 @@ export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[];
     if (!('IntersectionObserver' in window)) return;
     const io = new IntersectionObserver(es => es.forEach(en => {
       if (!en.isIntersecting) return;
-      const el = en.target as HTMLElement, s = +el.dataset.s!, a = +el.dataset.a!;
-      store.set('lastRead', {s, a, name: surahs[s - 1]?.en || 'Surah ' + s});
+      const el = en.target as HTMLElement, s = +el.dataset.s!, a = +el.dataset.a!, ay = ayahs.find(x => x.s === s && x.a === a);
+      setLastRead({s, a, name: surahs[s - 1]?.en || 'Surah ' + s, page: ay?.page, juz: ay?.juz});
     }), {rootMargin: '-30% 0px -60% 0px'});
     document.querySelectorAll('article.ayah').forEach(el => io.observe(el));
     return () => io.disconnect();
@@ -74,7 +76,7 @@ export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[];
         <Fragment key={ay.s + ':' + ay.a}>
           {mode === 'juz' && (i === 0 || ayahs[i - 1].s !== ay.s) && <>
             <div className="mb-2.5 mt-[22px] flex items-center justify-between rounded-xl bg-[linear-gradient(90deg,var(--brandSoft),transparent)] px-3.5 py-2.5 font-semibold text-brand">
-              <Link href={`/surah/${ay.s}`}>{ay.s}. {ay.sname}</Link><span className="font-amiri text-[22px]" dir="rtl">{surahs[ay.s - 1]?.ar}</span>
+              <Link href={`/surah/${ay.s}`}>{ay.s}. {ay.sname}</Link><span className="text-[22px]"><SurahName n={ay.s} prefix /></span>
             </div>
             {ay.a === 1 && ay.s !== 1 && ay.s !== 9 && <div className="bism">{meta.bism}</div>}
           </>}

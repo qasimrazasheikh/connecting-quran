@@ -1,9 +1,12 @@
 'use client';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useApp} from './AppProvider';
 import {usePlayer} from './PlayerProvider';
+import {getLastRead, setLastRead} from './resume';
+import {navStart} from './NavProgress';
 import AyahText from './AyahText';
+import SurahName from './SurahName';
 import TajweedKey from './TajweedKey';
 import {Icon} from './Icons';
 import {arNum, JUZ_PAGE, SURAH_PAGE} from '@/lib/meta';
@@ -21,9 +24,17 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => setPg(String(p)), [p]);
 
-  const go = useCallback((n: number) => { n = Math.min(604, Math.max(1, n | 0)); if (n !== p) router.push(`/mushaf/${n}`); }, [p, router]);
+  const go = useCallback((n: number) => { n = Math.min(604, Math.max(1, n | 0)); if (n !== p){ navStart(`/mushaf/${n}`); router.push(`/mushaf/${n}`); } }, [p, router]);
   const queue = useMemo(() => ayahs.map(x => ({key: `${x.s}:${x.a}`, s: x.s, a: x.a, n: x.n, name: x.sname})), [ayahs]);
-  useEffect(() => { setQueue(queue, {onEnd: p < 604 ? () => router.push(`/mushaf/${p + 1}`) : undefined}); }, [queue, setQueue, p, router]);
+  useEffect(() => { setQueue(queue, {onEnd: p < 604 ? () => { navStart(`/mushaf/${p + 1}`); router.push(`/mushaf/${p + 1}`); } : undefined}); }, [queue, setQueue, p, router]);
+  // the page's first ayah is where the reader is (Tafseer and the Mushaf link open there)
+  // (kept as is when the last-read ayah is already on this page, e.g. coming from a surah)
+  useEffect(() => {
+    const lr = getLastRead(), at = location.search.match(/[?&]at=(\d+):(\d+)/);
+    const f = (at && ayahs.find(x => x.s === +at[1] && x.a === +at[2])) || ayahs[0];
+    if (f && (at || !ayahs.some(x => x.s === lr?.s && x.a === lr.a))) setLastRead({s: f.s, a: f.a, name: f.sname, page: p, juz: f.juz});
+    if (at) history.replaceState(null, '', `/mushaf/${p}`);
+  }, [ayahs, p]);
   useEffect(() => { [p + 1, p - 1].filter(n => n >= 1 && n <= 604).forEach(n => router.prefetch(`/mushaf/${n}`)); window.scrollTo(0, 0); }, [p, router]);
   // ← → keys turn pages (Arabic books open right-to-left)
   useEffect(() => {
@@ -55,7 +66,7 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   };
   const touch = useRef<{x: number; y: number} | null>(null);
   const juz = ayahs[0]?.juz;
-  const names = [...new Set(ayahs.map(x => x.s))].map(n => surahs[n - 1]?.ar || '').join(' · ');
+  const nums = [...new Set(ayahs.map(x => x.s))];
   const mkey = menu ? `${menu.s}:${menu.a}` : '', mbm = bookmarks.some(b => b.k === mkey);
   const navBtn = 'grid size-11 flex-none place-items-center rounded-full border border-line bg-surface text-brand disabled:cursor-default disabled:opacity-35 max-[760px]:hidden [&_svg]:size-[22px]';
 
@@ -78,14 +89,14 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
           onTouchEnd={e => { const t = touch.current; if (!t) return; touch.current = null; const dx = e.changedTouches[0].clientX - t.x, dy = e.changedTouches[0].clientY - t.y;
             if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx > 0 ? p + 1 : p - 1); }}>
           <div className="mframe flex min-h-[60vh] flex-col px-2.5 pb-1.5 pt-2 md:px-4 md:pb-2 md:pt-2.5">
-            <div className="mb-1.5 flex justify-between border-b border-line pb-1.5 text-[13px] text-muted"><span>Juz {juz}</span><span className="font-amiri text-lg text-brand" dir="rtl">{names}</span></div>
+            <div className="mb-1.5 flex justify-between border-b border-line pb-1.5 text-[13px] text-muted"><span>Juz {juz}</span><span className="flex flex-row-reverse items-center gap-1.5 text-lg text-brand">{nums.map((n, i) => <Fragment key={n}>{i > 0 && <span>·</span>}<SurahName n={n} prefix /></Fragment>)}</span></div>
             {meta.tajweed && <TajweedKey />}
             <div className="mtext flex-1" id="mText">
               {ayahs.map(ay => {
                 const key = `${ay.s}:${ay.a}`;
                 return (
                   <span key={key}>
-                    {ay.a === 1 && <><div className="mtitle" dir="rtl">{surahs[ay.s - 1]?.ar}</div>{ay.s !== 1 && ay.s !== 9 && <div className="bism !my-1 !text-[calc(var(--ar-size)*.9)]">{meta.bism}</div>}</>}
+                    {ay.a === 1 && <><div className="mtitle"><SurahName n={ay.s} prefix /></div>{ay.s !== 1 && ay.s !== 9 && <div className="bism !my-1 !text-[calc(var(--ar-size)*.9)]">{meta.bism}</div>}</>}
                     <span data-key={key} data-s={ay.s} data-a={ay.a} className={cx('mayah', menu && mkey === key && 'sel', cur === key && 'playing')}
                       onClick={e => { e.stopPropagation(); showMenu(e.currentTarget, ay.s, ay.a); }}>
                       <AyahText s={ay.s} a={ay.a} words={ay.words} wbw={settings.wbw && ay.words.some(w => w.k === 'w' && w.m)} className={cx('!text-[length:inherit]', meta.ip && 'is-ip')}

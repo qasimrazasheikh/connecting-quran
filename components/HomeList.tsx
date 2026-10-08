@@ -1,21 +1,20 @@
 'use client';
 import Link from 'next/link';
 import {useEffect, useState} from 'react';
-import {store, useApp} from './AppProvider';
+import {useApp} from './AppProvider';
+import {getLastRead, mushafHref, type LastRead} from './resume';
 import {Icon} from './Icons';
+import SurahName from './SurahName';
 import {arNum, JUZ_START} from '@/lib/meta';
 import {btn, cx, empty, grid, linkCard, numBadge} from '@/lib/ui';
-
-type LastRead = {s: number; a: number; name: string};
 
 export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
   const {surahs} = useApp();
   const [q, setQ] = useState('');
   const [lr, setLr] = useState<LastRead | null>(null);
-  useEffect(() => setLr(store.get<LastRead | null>('lastRead', null)), []);
+  useEffect(() => setLr(getLastRead()), []);
   const query = q.trim().toLowerCase();
   const tabCls = (on: boolean) => cx('rounded-full border px-4 py-2 text-sm font-medium no-underline', on ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink');
-  const strip = (t: string) => t.replace(/^سُورَةُ\s*/, '');
 
   let list: React.ReactNode;
   if (!surahs.length) list = <div className={empty}>The surah list could not load. Check your internet connection and refresh.</div>;
@@ -31,7 +30,7 @@ export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
     list = items.length ? <div className={grid}>{items.map(s => (
       <Link key={s.n} className={linkCard} href={`/surah/${s.n}`}><div className={numBadge}>{s.n}</div>
         <div className="min-w-0 flex-1"><b className="block text-[15px]">{s.en}</b><span className="text-[12.5px] text-muted">{s.mean} · {s.ayahs} ayahs · {s.type}</span></div>
-        <div className="font-amiri text-[22px] text-brand" dir="rtl">{strip(s.ar)}</div></Link>))}</div>
+        <div className="text-[22px] text-brand"><SurahName n={s.n} /></div></Link>))}</div>
       : <div className={empty}>No surah matches “{q}”.</div>;
   }
 
@@ -41,7 +40,7 @@ export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
         <div>
           <h1 className="mb-1.5 mt-0 text-[28px] font-bold tracking-tight">Read the Holy Quran</h1>
           <p className="m-0 max-w-[520px] opacity-90">Arabic text with Urdu and English translations, and tafseer for every ayah. Pick a Surah or Juz to begin.</p>
-          <Link className={cx(btn, 'mt-3.5 !border-white !bg-white !text-hero1')} href="/mushaf"><Icon.book /> Open Mushaf (Arabic only)</Link>
+          <Link className={cx(btn, 'mt-3.5 !border-white !bg-white !text-hero1')} href={mushafHref(lr)}><Icon.book /> Open Mushaf (Arabic only)</Link>
         </div>
         <div className="font-ar text-[34px] leading-relaxed text-accent2 [text-shadow:0_2px_20px_rgba(0,0,0,.25)]" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
       </section>

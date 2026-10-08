@@ -4,7 +4,7 @@
 :root{
   --bg:#f7f5ef; --surface:#ffffff; --surface2:#f0ede4; --text:#1f2a24; --muted:#66706a; --line:#e2ddd0;
   --brand:#0f6b4f; --brand2:#0b5139; --accent:#b8892b; --accent2:#ffffff; --brandSoft:#e3f1ea; --onBrand:#fff;
-  --hero1:#0f6b4f; --hero2:#0b5139; --paper:#fffdf6; --frame:#c9a85a;
+  --hero1:#0f6b4f; --hero2:#0b5139; --paper:#fff; --frame:#c9a85a;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
   --ar-size:32px; --tr-size:18px;
 }
@@ -23,13 +23,13 @@
 :root[data-palette="midnight"]{
   --bg:#f4f5fb; --surface:#ffffff; --surface2:#eef0f8; --text:#141833; --muted:#5d6482; --line:#e2e5f1;
   --brand:#3d3fc4; --brand2:#24267f; --accent:#e5a619; --accent2:#f6cf6a; --brandSoft:#ebedfe; --onBrand:#fff;
-  --hero1:#1b1d5e; --hero2:#3d3fc4; --paper:#fffdf6; --frame:#c9a227;
+  --hero1:#1b1d5e; --hero2:#3d3fc4; --paper:#fff; --frame:#c9a227;
   --shadow:0 1px 2px rgba(20,24,51,.06),0 8px 24px rgba(20,24,51,.06);
 }
 :root[data-palette="ocean"]{
   --bg:#f3f8fa; --surface:#ffffff; --surface2:#e9f2f5; --text:#0f2530; --muted:#557079; --line:#dbe8ed;
   --brand:#0b7a99; --brand2:#0b4f6c; --accent:#f2683c; --accent2:#ffb38f; --brandSoft:#e1f3f8; --onBrand:#fff;
-  --hero1:#063d55; --hero2:#0b7a99; --paper:#fdfcf8; --frame:#d68a5c;
+  --hero1:#063d55; --hero2:#0b7a99; --paper:#fff; --frame:#d68a5c;
   --shadow:0 1px 2px rgba(15,37,48,.06),0 8px 24px rgba(15,37,48,.06);
 }
 @media (prefers-color-scheme: dark){
@@ -80,8 +80,14 @@
   --font-amiri: "Amiri Quran", "Amiri", serif;
   --font-ur: "Noto Nastaliq Urdu", serif;
   --font-ip: "IndoPak Nastaleeq", "Scheherazade New", serif;
+  --font-sn: "surahnames";
   --shadow-card: var(--shadow);
 }
+
+/* Surah-name calligraphy, as on quran.com: the text "001"…"114" is drawn as that surah's name (linked from quran.com's public repo, not redistributed) */
+@font-face{font-family:"surahnames";font-display:block;
+  src:url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/surah-names/v1/sura_names.woff2") format("woff2"),
+      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/surah-names/v1/sura_names.woff") format("woff")}
 
 /* Indo-Pak Quran font: the same face and sources quran.com declares (src/styles/fonts.scss), linked from their public repo, not redistributed */
 @font-face{font-family:"IndoPak Nastaleeq";font-display:swap;
@@ -119,6 +125,9 @@ button{cursor:pointer}
   .w{cursor:pointer;border-radius:4px;transition:background .12s}
   .w:hover{background:color-mix(in srgb,var(--brand) 12%,transparent)}
   .w.wsel{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+  /* Indo-Pak Nastaleeq ayah-end tokens are private-use glyphs that browsers treat as left-to-right. With word-by-word on,
+     words are boxes (neutral for text direction), so those tokens would flip the order of the words between them: isolate them */
+  .wbw .wx{unicode-bidi:isolate}
   .wbw .w{display:inline-flex;flex-direction:column;align-items:center;vertical-align:top;margin:0 .12em .3em;line-height:1.9}
   .wm{font-family:var(--font-sans);font-size:max(11px,calc(var(--ar-size) * .36));line-height:1.3;color:var(--muted);max-width:9em;text-align:center;white-space:normal;unicode-bidi:plaintext}
 
@@ -157,6 +166,12 @@ button{cursor:pointer}
   .hero-bg{background:radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--accent) 38%,transparent) 0%,transparent 45%),linear-gradient(135deg,var(--hero1),var(--hero2))}
   .hero-ring::after{content:"";position:absolute;inset:auto -60px -80px auto;width:260px;height:260px;border-radius:50%;border:1px solid color-mix(in srgb,var(--accent2) 35%,transparent);box-shadow:0 0 0 30px color-mix(in srgb,#fff 4%,transparent),0 0 0 60px color-mix(in srgb,#fff 3%,transparent);pointer-events:none}
 
+  /* first-load screen: fades in only if loading takes a moment, hides when the page is ready (see BOOT_JS in layout) or after 12 s */
+  #boot{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    background:var(--bg);color:var(--muted);font-size:14px;opacity:0;animation:boot-in .25s .3s forwards,boot-out .3s 12s forwards}
+  html.booted #boot{display:none}
+  @keyframes boot-in{to{opacity:1}}
+  @keyframes boot-out{to{opacity:0;visibility:hidden}}
   .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .no-scrollbar{scrollbar-width:thin}

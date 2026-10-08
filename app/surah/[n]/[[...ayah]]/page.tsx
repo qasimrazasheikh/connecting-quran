@@ -3,6 +3,7 @@ import {notFound} from 'next/navigation';
 import type {Metadata} from 'next';
 import AyahList from '@/components/AyahList';
 import ErrorBox from '@/components/ErrorBox';
+import SurahName from '@/components/SurahName';
 import TajweedKey from '@/components/TajweedKey';
 import {ChangeTranslations, PlayAll} from '@/components/ReaderBits';
 import {readSettings} from '@/lib/server-settings';
@@ -32,7 +33,7 @@ export default async function SurahPage({params}: P) {
   return (
     <>
       <section className={rhead}>
-        <div className="font-amiri text-[40px] leading-normal text-brand" dir="rtl">{info.ar}</div>
+        <div className="text-[40px] leading-normal text-brand"><SurahName n={n} prefix /></div>
         <h1 className="mb-0.5 mt-1 text-[22px] font-bold">{n}. {info.en}</h1>
         <div className="text-sm text-muted">{info.mean} · {info.ayahs} ayahs · {info.type}</div>
         <div className="mt-3 flex flex-wrap justify-center gap-2">

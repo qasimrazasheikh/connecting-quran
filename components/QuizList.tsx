@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import {useState} from 'react';
 import {useApp} from './AppProvider';
+import SurahName from './SurahName';
 import {QUIZ_LEN, QUIZ_PART} from '@/lib/meta';
 import {quizParts} from '@/lib/quiz';
 import {card, grid, numBadge, rhead} from '@/lib/ui';
@@ -22,7 +23,7 @@ export default function QuizList() {
             <div key={x.n} className={`${card} flex flex-col px-3.5 py-3`}>
               <div className="flex items-center gap-3"><div className={numBadge}>{x.n}</div>
                 <div className="min-w-0 flex-1"><b className="block text-[15px]">{x.en}</b><span className="text-[12.5px] text-muted">{x.ayahs} ayahs · {parts.length} quiz{parts.length > 1 ? 'zes' : ''}</span></div>
-                <div className="font-amiri text-[22px] text-brand" dir="rtl">{x.ar.replace(/^سُورَةُ\s*/, '')}</div></div>
+                <div className="text-[22px] text-brand"><SurahName n={x.n} /></div></div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {parts.map(([f, t], i) => <Link key={i} href={`/quiz/${x.n}/${i + 1}`} className="rounded-full border border-line bg-surface px-2.5 py-1 text-[12.5px] text-ink no-underline hover:border-brand hover:text-brand">{parts.length > 1 ? `Part ${i + 1} · ` : 'Start · '}{f}–{t}</Link>)}
               </div>
