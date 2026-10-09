@@ -25,5 +25,6 @@ export function resumeAt(path: string): At | null {
   if ((kind === 'tafseer' || kind === 'videos') && n >= 1 && n <= 114 && m >= 1) return lr?.s === n && lr.a === m ? last : {s: n, a: m};
   return last;
 }
-export const mushafHref = (at: At | null) => !at ? '/mushaf' : at.page ? `/mushaf/${at.page}` : `/mushaf?at=${at.s}:${at.a}`;
+/** Mushaf opens at the start of the reader's surah (not the exact ayah), with its first ayah highlighted via `at`. */
+export const mushafHref = (at: At | null) => !at ? '/mushaf' : `/mushaf/${SURAH_PAGE[at.s - 1]}?at=${at.s}:1`;
 export const tafseerHref = (at: At | null) => at ? `/tafseer/${at.s}/${at.a}` : '/tafseer/1/1';

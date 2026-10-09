@@ -30,7 +30,8 @@ export default function Header() {
   const [at, setAt] = useState<ReturnType<typeof resumeAt>>(null);
   const refreshAt = () => setAt(resumeAt(location.pathname));
   useEffect(refreshAt, [path]);
-  const hrefOf = (n: (typeof NAV)[number]) => n.key === 'mushaf' ? mushafHref(at) : n.key === 'tafseer' ? tafseerHref(at) : n.href;
+  // already in the Mushaf: the link stays on the current page rather than jumping back to the surah start
+  const hrefOf = (n: (typeof NAV)[number]) => n.key === 'mushaf' ? (on === 'mushaf' ? path : mushafHref(at)) : n.key === 'tafseer' ? tafseerHref(at) : n.href;
   const push = (u: string) => { navStart(u); router.push(u); };
 
   const go = (e: React.FormEvent) => {

@@ -28,7 +28,7 @@ const ay = (id, s, from, to) => { const out = []; for (let a = from; a <= to; a+
 const json = (res, body, status = 200) => { res.writeHead(status, {'content-type': 'application/json'}); res.end(JSON.stringify(body)); };
 const words = (k, lang) => { const [s, a] = k.split(':').map(Number); const t = ayText('quran-uthmani', s, a).replace(BISM, '').split(' ');
   return t.map((w, i) => ({char_type_name: 'word', text_indopak: i === 0 ? 'وَ هُوَ' : w, translation: {text: `${lang}-m${i + 1}`}, transliteration: {text: 'tr' + (i + 1)}})).concat([{char_type_name: 'end'}]); };
-const pageKeys = pg => pg === 2 ? ['1:7', '2:1', '2:2'] : ['2:3', '2:4'];
+const pageKeys = pg => pg === 1 ? ['1:1', '1:2', '1:3', '1:4', '1:5', '1:6'] : pg === 2 ? ['1:7', '2:1', '2:2'] : ['2:3', '2:4'];
 
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x'), p = decodeURIComponent(u.pathname), q = u.searchParams;

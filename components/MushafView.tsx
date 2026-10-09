@@ -21,6 +21,7 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   const {cur, setQueue, toggle} = usePlayer();
   const [menu, setMenu] = useState<Menu>(null);
   const [pg, setPg] = useState(String(p));
+  const [hl, setHl] = useState('');  // the ayah named by ?at= (e.g. a surah's first ayah when coming from the reader), if not first on the page
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => setPg(String(p)), [p]);
 
@@ -31,8 +32,10 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   // (kept as is when the last-read ayah is already on this page, e.g. coming from a surah)
   useEffect(() => {
     const lr = getLastRead(), at = location.search.match(/[?&]at=(\d+):(\d+)/);
-    const f = (at && ayahs.find(x => x.s === +at[1] && x.a === +at[2])) || ayahs[0];
+    const named = at && ayahs.find(x => x.s === +at[1] && x.a === +at[2]), f = named || ayahs[0];
     if (f && (at || !ayahs.some(x => x.s === lr?.s && x.a === lr.a))) setLastRead({s: f.s, a: f.a, name: f.sname, page: p, juz: f.juz});
+    // highlighted only when it's further down the page; at the top of the page it needs no pointing out
+    setHl(named && named !== ayahs[0] ? `${named.s}:${named.a}` : '');
     if (at) history.replaceState(null, '', `/mushaf/${p}`);
   }, [ayahs, p]);
   useEffect(() => { [p + 1, p - 1].filter(n => n >= 1 && n <= 604).forEach(n => router.prefetch(`/mushaf/${n}`)); window.scrollTo(0, 0); }, [p, router]);
@@ -97,7 +100,7 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
                 return (
                   <span key={key}>
                     {ay.a === 1 && <><div className="mtitle"><SurahName n={ay.s} prefix /></div>{ay.s !== 1 && ay.s !== 9 && <div className="bism !my-1 !text-[calc(var(--ar-size)*.9)]">{meta.bism}</div>}</>}
-                    <span data-key={key} data-s={ay.s} data-a={ay.a} className={cx('mayah', menu && mkey === key && 'sel', cur === key && 'playing')}
+                    <span data-key={key} data-s={ay.s} data-a={ay.a} className={cx('mayah', (menu ? mkey === key : hl === key) && 'sel', cur === key && 'playing')}
                       onClick={e => { e.stopPropagation(); showMenu(e.currentTarget, ay.s, ay.a); }}>
                       <AyahText s={ay.s} a={ay.a} words={ay.words} wbw={settings.wbw && ay.words.some(w => w.k === 'w' && w.m)} className={cx('!text-[length:inherit]', meta.ip && 'is-ip')}
                         onAyah={() => { const el = document.querySelector(`.mayah[data-key="${key}"]`) as HTMLElement; if (el) showMenu(el, ay.s, ay.a); }} />

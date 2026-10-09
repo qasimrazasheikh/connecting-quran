@@ -102,6 +102,12 @@ await p.click('#mMenu [data-m=tafsir]'); await p.waitForSelector('#tafDrawer .ac
 await p.click('#mNext'); await p.waitForURL('**/mushaf/3'); await p.waitForSelector('.mayah');
 ok(await p.locator('.mayah').count() === 2, 'next page');
 await p.keyboard.press('ArrowRight'); await p.waitForURL('**/mushaf/2'); ok(true, 'arrow key turns page');
+await go('/surah/2/5'); await p.waitForSelector('#a-2-5');
+await p.locator('header a', {hasText: 'Mushaf'}).first().click(); await p.waitForURL('**/mushaf/2'); await p.waitForSelector('.mayah');
+ok(await p.locator('.mayah.sel[data-key="2:1"]').count() === 1, 'Mushaf link opens at the surah start with its first ayah highlighted');
+await go('/surah/1/5'); await p.waitForSelector('#a-1-5');
+await p.locator('header a', {hasText: 'Mushaf'}).first().click(); await p.waitForURL('**/mushaf/1'); await p.waitForSelector('.mayah');
+ok(await p.locator('.mayah').first().getAttribute('data-key') === '1:1' && await p.locator('.mayah.sel').count() === 0, 'no highlight when the surah starts at the top of the page');
 
 console.log('# tafseer page');
 await go('/tafseer/2/10'); await p.waitForSelector('section.acc');
