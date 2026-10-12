@@ -1,7 +1,8 @@
 /** Server-side data access. Every external call goes through here and is cached (see REVALIDATE). */
 import {API, REVALIDATE} from './config';
+import {catalogTafsirs} from './catalog';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
-import {cleanIP, type QWord} from './text';
+import {cleanIP, fixTanzil, type QWord} from './text';
 
 class HttpError extends Error { constructor(public status: number, url: string){ super(`HTTP ${status} for ${url}`); } }
 async function getJSON<T>(url: string, revalidate = REVALIDATE): Promise<T> {
@@ -29,17 +30,20 @@ export function transMeta(eds: TransEdition[], id: string){
 
 export type CloudAyah = {number: number; text: string; numberInSurah: number; juz: number; page?: number; surah: {number: number; name: string; englishName: string}};
 type Edition = {edition: {identifier: string; language: string}; ayahs: CloudAyah[]};
+/** The Uthmani edition is only a fallback for quran.com's text (getUthmani); clean it so it still reads right. */
+const cleanEd = (e: Edition): Edition => e.edition?.identifier === 'quran-uthmani' ? {...e, ayahs: e.ayahs.map(x => ({...x, text: fixTanzil(x.text)}))} : e;
 export async function getSurahEditions(n: number, ids: string[]): Promise<Edition[]> {
-  return (await getJSON<{data: Edition[]}>(`${API.quranCloud}/surah/${n}/editions/${ids.join(',')}`)).data;
+  return (await getJSON<{data: Edition[]}>(`${API.quranCloud}/surah/${n}/editions/${ids.join(',')}`)).data.map(cleanEd);
 }
 export async function getJuzEdition(j: number, id: string): Promise<Edition> {
-  return (await getJSON<{data: Edition}>(`${API.quranCloud}/juz/${j}/${id}`)).data;
+  return cleanEd((await getJSON<{data: Edition}>(`${API.quranCloud}/juz/${j}/${id}`)).data);
 }
 export async function getPageEdition(p: number, id: string): Promise<Edition> {
-  return (await getJSON<{data: Edition}>(`${API.quranCloud}/page/${p}/${id}`)).data;
+  return cleanEd((await getJSON<{data: Edition}>(`${API.quranCloud}/page/${p}/${id}`)).data);
 }
 export async function getAyahEditions(s: number, a: number, ids: string[]): Promise<(CloudAyah & {edition: {identifier: string}})[]> {
-  return (await getJSON<{data: (CloudAyah & {edition: {identifier: string}})[]}>(`${API.quranCloud}/ayah/${s}:${a}/editions/${ids.join(',')}`)).data;
+  const d = (await getJSON<{data: (CloudAyah & {edition: {identifier: string}})[]}>(`${API.quranCloud}/ayah/${s}:${a}/editions/${ids.join(',')}`)).data;
+  return d.map(x => x.edition?.identifier === 'quran-uthmani' ? {...x, text: fixTanzil(x.text)} : x);
 }
 
 /**
@@ -49,9 +53,19 @@ export async function getAyahEditions(s: number, a: number, ids: string[]): Prom
  * words, are private-use glyphs, so it can't be copied; `legacy` (text_indopak) is plain enough to copy (see plainIP).
  */
 export type IPKind = 'chapter' | 'juz' | 'page' | 'verse';
+const versesQuery = (kind: IPKind, id: string | number) => ({chapter: `chapter_number=${id}`, juz: `juz_number=${id}`, page: `page_number=${id}`, verse: `verse_key=${id}`}[kind]);
+/**
+ * quran.com's Uthmani text, map "s:a" -> text (no Bismillah on ayah 1). This is the Arabic the site shows: it matches
+ * quran.com, and its words are numbered like quran.com's word data and QUL's (related ayahs).
+ */
+export async function getUthmani(kind: IPKind, id: string | number): Promise<Record<string, string>> {
+  const d = await getJSON<{verses: {verse_key: string; text_uthmani: string}[]}>(`${API.quranCom}/quran/verses/uthmani?${versesQuery(kind, id)}`);
+  if (!d.verses?.length) throw new Error('empty');
+  return Object.fromEntries(d.verses.map(v => [v.verse_key, v.text_uthmani]));
+}
 export type IPEdition = 'nastaleeq' | 'legacy';
 export async function getIndoPak(kind: IPKind, id: string | number, edition: IPEdition = 'nastaleeq'): Promise<Record<string, string>> {
-  const q = {chapter: `chapter_number=${id}`, juz: `juz_number=${id}`, page: `page_number=${id}`, verse: `verse_key=${id}`}[kind];
+  const q = versesQuery(kind, id);
   const field = edition === 'nastaleeq' ? 'text_indopak_nastaleeq' : 'text_indopak';
   try{
     const d = await getJSON<{verses: ({verse_key: string} & Record<string, string>)[]}>(`${API.quranCom}/quran/verses/${field.slice(5)}?${q}`);
@@ -102,7 +116,10 @@ export function getMorph(): Promise<Map<string, MSeg[]>> {
   return morphP;
 }
 
+/** The curated catalogue's approved tafseers; without a database, the API's list minus known-broken editions. */
 export async function getTafsirEditions(): Promise<TafsirEdition[]> {
+  const cat = await catalogTafsirs();
+  if (cat?.length) return cat;
   let list: TafsirEdition[];
   try{
     const d = await getJSON<TafsirEdition[]>(`${API.tafsir}/editions.json`);

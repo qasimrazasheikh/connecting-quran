@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import {chromium} from 'playwright';
 const BASE = process.env.BASE || 'http://localhost:3100';
 const OUT = process.env.SHOTS || '/tmp/vis'; fs.rmSync(OUT, {recursive: true, force: true}); fs.mkdirSync(OUT, {recursive: true});
-const b = await chromium.launch();
+// PW_CHANNEL=msedge (or chrome) uses an installed browser instead of Playwright's own download
+const b = await chromium.launch(process.env.PW_CHANNEL ? {channel: process.env.PW_CHANNEL} : {});
 const errs = [];
 async function run(name, vp, cookie){
   const ctx = await b.newContext({viewport: vp, deviceScaleFactor: 1, hasTouch: vp.width < 500});

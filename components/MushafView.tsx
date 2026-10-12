@@ -7,6 +7,7 @@ import {getLastRead, setLastRead} from './resume';
 import {navStart} from './NavProgress';
 import AyahText from './AyahText';
 import SurahName from './SurahName';
+import AyahPicker from './AyahPicker';
 import TajweedKey from './TajweedKey';
 import {Icon} from './Icons';
 import {arNum, JUZ_PAGE, SURAH_PAGE} from '@/lib/meta';
@@ -15,15 +16,15 @@ import {abtn, cx, sel} from '@/lib/ui';
 
 type Menu = {s: number; a: number; top: number; left: number} | null;
 
-export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView[]; meta: ViewMeta}) {
+/** `at`: the ayah named by ?at= (from the server, so it survives the address being tidied to /mushaf/<page>). */
+export default function MushafView({p, ayahs, meta, at}: {p: number; ayahs: AyahView[]; meta: ViewMeta; at: string}) {
   const router = useRouter();
   const {surahs, settings, bookmarks, toggleBookmark, openTafsir, toast} = useApp();
   const {cur, setQueue, toggle} = usePlayer();
   const [menu, setMenu] = useState<Menu>(null);
-  const [pg, setPg] = useState(String(p));
+  const [pos, setPos] = useState({s: ayahs[0]?.s ?? 1, a: ayahs[0]?.a ?? 1}); // shown in the surah/ayah dropdowns
   const [hl, setHl] = useState('');  // the ayah named by ?at= (e.g. a surah's first ayah when coming from the reader), if not first on the page
   const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => setPg(String(p)), [p]);
 
   const go = useCallback((n: number) => { n = Math.min(604, Math.max(1, n | 0)); if (n !== p){ navStart(`/mushaf/${n}`); router.push(`/mushaf/${n}`); } }, [p, router]);
   const queue = useMemo(() => ayahs.map(x => ({key: `${x.s}:${x.a}`, s: x.s, a: x.a, n: x.n, name: x.sname})), [ayahs]);
@@ -31,13 +32,15 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   // the page's first ayah is where the reader is (Tafseer and the Mushaf link open there)
   // (kept as is when the last-read ayah is already on this page, e.g. coming from a surah)
   useEffect(() => {
-    const lr = getLastRead(), at = location.search.match(/[?&]at=(\d+):(\d+)/);
-    const named = at && ayahs.find(x => x.s === +at[1] && x.a === +at[2]), f = named || ayahs[0];
-    if (f && (at || !ayahs.some(x => x.s === lr?.s && x.a === lr.a))) setLastRead({s: f.s, a: f.a, name: f.sname, page: p, juz: f.juz});
+    const lr = getLastRead();
+    const named = at ? ayahs.find(x => `${x.s}:${x.a}` === at) : undefined, f = named || ayahs[0];
+    const keep = !at && ayahs.some(x => x.s === lr?.s && x.a === lr.a);
+    if (f && !keep) setLastRead({s: f.s, a: f.a, name: f.sname, page: p, juz: f.juz});
+    if (f) setPos(keep && lr ? {s: lr.s, a: lr.a} : {s: f.s, a: f.a});
     // highlighted only when it's further down the page; at the top of the page it needs no pointing out
     setHl(named && named !== ayahs[0] ? `${named.s}:${named.a}` : '');
-    if (at) history.replaceState(null, '', `/mushaf/${p}`);
-  }, [ayahs, p]);
+    if (/[?&]at=/.test(location.search)) history.replaceState(null, '', `/mushaf/${p}`);
+  }, [ayahs, p, at]);
   useEffect(() => { [p + 1, p - 1].filter(n => n >= 1 && n <= 604).forEach(n => router.prefetch(`/mushaf/${n}`)); window.scrollTo(0, 0); }, [p, router]);
   // ← → keys turn pages (Arabic books open right-to-left)
   useEffect(() => {
@@ -76,14 +79,10 @@ export default function MushafView({p, ayahs, meta}: {p: number; ayahs: AyahView
   return (
     <div className={meta.ip ? '' : 'no-ip'}>
       <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
-        <select className={sel} id="mSurah" value="" onChange={e => e.target.value && go(SURAH_PAGE[+e.target.value - 1])}>
-          <option value="">Go to surah…</option>{surahs.map(x => <option key={x.n} value={x.n}>{x.n}. {x.en}</option>)}</select>
-        <select className={sel} id="mJuz" value="" onChange={e => e.target.value && go(JUZ_PAGE[+e.target.value - 1])}>
-          <option value="">Go to juz…</option>{JUZ_PAGE.map((_, i) => <option key={i} value={i + 1}>Juz {i + 1}</option>)}</select>
-        <form id="mPg" className="flex overflow-hidden rounded-[9px] border border-line bg-surface" onSubmit={e => { e.preventDefault(); go(+pg); }}>
-          <input id="mPgIn" inputMode="numeric" value={pg} onChange={e => setPg(e.target.value)} aria-label="Page number" className="w-16 border-0 bg-transparent px-2 py-[7px] text-center text-ink outline-none" />
-          <button className="border-0 bg-brand px-3 text-on-brand">Go</button>
-        </form>
+        {/* the ayah's page opens with it highlighted (the server finds the page for ?at=) */}
+        <AyahPicker s={pos.s} a={pos.a} idPrefix="m" onGo={(s, a) => { const u = a === 1 ? `/mushaf/${SURAH_PAGE[s - 1]}?at=${s}:1` : `/mushaf?at=${s}:${a}`; navStart(u); router.push(u); }} />
+        <select className={sel} id="mJuz" aria-label="Juz" value={juz ?? ''} onChange={e => go(JUZ_PAGE[+e.target.value - 1])}>
+          {JUZ_PAGE.map((_, i) => <option key={i} value={i + 1}>Juz {i + 1}</option>)}</select>
       </div>
       <div className="flex items-center justify-center gap-2">
         <button className={navBtn} id="mNext" disabled={p >= 604} aria-label="Next page" onClick={() => go(p + 1)}><Icon.left /></button>

@@ -43,12 +43,13 @@ http.createServer((req, res) => {
   if ((m = p.match(/^\/cloud\/search\/([^/]+)\/all\/(.+)$/))) { if (m[1] === 'nothing') return json(res, {code: 404, data: 'Nothing'}, 404);
     return json(res, {code: 200, data: {count: 120, matches: Array.from({length: 120}, (_, k) => ({text: `text with ${m[1]} inside ${k + 1}`, numberInSurah: k + 1, surah: {number: 2, englishName: 'Surah-2'}}))}}); }
   // ---- Quran.com (/qc = /api/v4)
+  const versesKeys = () => q.get('page_number') ? pageKeys(+q.get('page_number'))
+    : q.get('chapter_number') ? Array.from({length: COUNT(+q.get('chapter_number'))}, (_, k) => q.get('chapter_number') + ':' + (k + 1))
+    : q.get('juz_number') ? ['1:1', '1:2', '2:1', '2:2'] : [q.get('verse_key')];
+  if (p === '/qc/quran/verses/uthmani')
+    return json(res, {verses: versesKeys().map(k => ({verse_key: k, text_uthmani: ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '')}))});
   if ((m = p.match(/^\/qc\/quran\/verses\/(indopak|indopak_nastaleeq)$/))){
-    let keys = [];
-    if (q.get('page_number')) keys = pageKeys(+q.get('page_number'));
-    else if (q.get('chapter_number')) { const n = +q.get('chapter_number'); keys = Array.from({length: COUNT(n)}, (_, k) => n + ':' + (k + 1)); }
-    else if (q.get('juz_number')) keys = ['1:1', '1:2', '2:1', '2:2'];
-    else keys = [q.get('verse_key')];
+    const keys = versesKeys();
     return json(res, {verses: keys.map(k => ({verse_key: k, ['text_' + m[1]]: (k === '1:1' ? 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ' : 'وَ هُوَ ' + ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '').split(' ').slice(1).join(' ')) + '​‏'}))});
   }
   if ((m = p.match(/^\/qc\/verses\/by_(chapter|juz|page)\/(\d+)$/))) {
@@ -60,10 +61,10 @@ http.createServer((req, res) => {
   if (p === '/tafsir/editions.json') return json(res, [
     {slug: 'en-tafisr-ibn-kathir', name: 'Ibn Kathir', language_name: 'english', author_name: 'IK'},
     {slug: 'ur-tafseer-ibn-e-kaseer', name: 'IK Urdu', language_name: 'urdu', author_name: 'IK'},
-    {slug: 'ur-tafsir-bayan-ul-quran', name: 'Bayan ul Quran', language_name: 'urdu', author_name: 'Dr. Israr Ahmad'},
+    {slug: 'tafsir-bayan-ul-quran', name: 'Bayan ul Quran', language_name: 'urdu', author_name: 'Dr. Israr Ahmad'},
     {slug: 'en-tafsir-maarif-ul-quran', name: 'Maarif', language_name: 'english', author_name: 'Shafi'},
     {slug: 'ar-tafsir-muyassar', name: 'Muyassar', language_name: 'arabic', author_name: 'KFC'},
-    {slug: 'tafsir-bayan-ul-quran', name: 'Broken dup', language_name: 'urdu'}]);
+    {slug: 'ur-tafsir-bayan-ul-quran', name: 'Broken dup', language_name: 'urdu'}]);
   if ((m = p.match(/^\/tafsir\/([a-z0-9-]+)\/(\d+)\/(\d+)\.json$/))) {
     if (m[2] === '2' && m[3] === '4') { res.writeHead(404); return res.end('nf'); }
     if (m[1].startsWith('ur-')) return json(res, {text: 'آیت 1 يَسْـَٔلُوْنَكَ عَنِ الْاَنْفَالِ ط قُلِ الْاَنْفَالُ لِلّٰهِ یہاں مال غنیمت کے لیے لفظ انفال استعمال کیا گیا ہے۔'});

@@ -5,7 +5,8 @@ const require = createRequire(import.meta.url);
 let pw; try{ pw = require('playwright'); }catch{ pw = require('/home/claude/.npm-global/lib/node_modules/playwright'); }
 const BASE = process.env.BASE || 'http://localhost:3100';
 const OUT = process.env.SHOTS || '/tmp/shots'; fs.mkdirSync(OUT, {recursive: true});
-const b = await pw.chromium.launch();
+// PW_CHANNEL=msedge (or chrome) uses an installed browser instead of Playwright's own download
+const b = await pw.chromium.launch(process.env.PW_CHANNEL ? {channel: process.env.PW_CHANNEL} : {});
 const ctx = await b.newContext({viewport: {width: 1280, height: 900}});
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errs.push(m.text()); });
@@ -35,10 +36,14 @@ await p.click('#a-2-3 [data-act=tafsir]'); await p.waitForSelector('#tafDrawer .
 const th = await p.locator('#tafDrawer .tafsir').first().innerHTML();
 ok(!/script|onclick/.test(th), 'tafseer html sanitised', th.slice(0, 80));
 const names = await p.locator('#tafDrawer section.acc b').allInnerTexts();
-ok(names.length >= 4 && !names.includes('Broken dup'), 'accordion sections', names.join(' | '));
+ok(names.length === 3 && ['IK Urdu', 'Bayan ul Quran'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'Muyassar'].includes(n)), 'accordion sections (Urdu by default)', names.join(' | '));
 await p.click('#tafDrawer [data-acc=expand]'); await p.waitForTimeout(500);
 ok(await p.locator('#tafDrawer section.acc [aria-expanded=true]').count() === names.length, 'expand all');
 ok(await p.locator('#tafDrawer .tafsir .qar').count() > 0, 'Quran quote marked inside Urdu tafseer');
+await p.click('#tafDrawer [data-lang=en]'); await p.waitForTimeout(500);
+const enNames = await p.locator('#tafDrawer section.acc b').allInnerTexts();
+ok(enNames.join() === 'Ibn Kathir,Maarif', 'language bar → English tafseers', enNames.join(' | '));
+await p.click('#tafDrawer [data-lang=ur]'); await p.waitForTimeout(300);
 await shot('tafsir-drawer');
 await p.click('#tafNext'); await p.waitForTimeout(500);
 ok((await p.locator('#tafTitle').innerText()).includes('2:4'), 'next ayah', await p.locator('#tafTitle').innerText());
@@ -54,7 +59,11 @@ ok(await p.locator('#tafDrawer .titem[aria-selected=true]').count() === 1, 'list
 await shot('tafsir-split');
 await p.click('#tafDrawer [data-ts=layout]');
 await p.click('#tafDrawer [data-acc=edit]'); await p.waitForSelector('#tafSet input[data-taf]');
-ok(await p.locator('#tafSet input[data-taf]').count() >= 5, 'edit list opens settings');
+const urCount = await p.locator('#tafSet input[data-taf]').count();
+await p.click('#tafLangSeg [data-lang=en]'); await p.waitForTimeout(200);
+const enCount = await p.locator('#tafSet input[data-taf]').count();
+await p.click('#tafLangSeg [data-lang=ur]');
+ok(urCount >= 3 && enCount >= 2, 'edit list opens settings, one language at a time', `ur ${urCount}, en ${enCount}`);
 await p.keyboard.press('Escape'); await p.waitForTimeout(300);
 
 console.log('# word card');
@@ -119,10 +128,11 @@ await go('/tafseer'); await p.waitForURL('**/tafseer/1/1'); ok(true, '/tafseer r
 
 console.log('# translate bar');
 await go('/tafseer/2/5'); await p.waitForSelector('section.acc');
-await p.selectOption('section.acc ~ div select', 'ar-tafsir-muyassar'); await p.waitForSelector('.tafsir.arabic');
+await p.click('[data-lang=ar]'); await p.waitForSelector('section.acc[data-slug=ar-tafsir-muyassar]'); await p.waitForSelector('.tafsir.arabic');  // first Arabic tafseer opens by itself
 await p.evaluate(() => { const el = document.querySelector('.tafsir.arabic p'); const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); });
 await p.waitForSelector('#selBtn', {timeout: 3000}).catch(() => {});
 ok(await p.locator('#selBtn').count() === 1, 'Google Translate bar on Arabic selection');
+await p.click('[data-lang=ur]');
 
 console.log('# search');
 await go('/search?q=mercy'); await p.waitForSelector('.sres');

@@ -9,6 +9,7 @@ export const card = 'rounded-2xl border border-line bg-surface shadow-card';
 export const linkCard = 'flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3 text-ink no-underline shadow-card transition hover:-translate-y-px hover:border-brand hover:shadow-[0_10px_28px_color-mix(in_srgb,var(--brand)_16%,transparent)]';
 export const numBadge = 'grid size-[38px] flex-none place-items-center rounded-[10px] bg-[linear-gradient(135deg,var(--brandSoft),color-mix(in_srgb,var(--accent)_16%,var(--brandSoft)))] text-sm font-semibold text-brand no-underline';
 export const chip = 'rounded-full bg-surface2 px-2.5 py-1 text-[12.5px] text-muted';
+export const field = 'w-full rounded-[9px] border border-line bg-surface px-2.5 py-[7px] text-ink';
 export const sel = 'max-w-full rounded-[9px] border border-line bg-surface px-2.5 py-[7px] text-ink';
 export const empty = 'rounded-xl border border-dashed border-line bg-surface p-8 text-center text-muted';
 export const rhead = 'mb-3.5 rounded-2xl border border-line bg-surface px-4 py-[22px] text-center';

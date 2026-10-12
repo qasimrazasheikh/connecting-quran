@@ -49,7 +49,8 @@ export const FALLBACK_TRANS: TransEdition[] = [
 ];
 export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string};
 export const QE_SLUG = 'qe-urdu-junagarhi';
-export const QE_EDITION: TafsirEdition = {slug: QE_SLUG, name: 'Junagarhi translation + tafseeri notes', language_name: 'urdu', author_name: 'QuranEnc · Rowwad Translation Center'};
+/** QuranEnc's Urdu Junagarhi translation; its notes are Ahsan-ul-Bayan (Hafiz Salahuddin Yusuf). */
+export const QE_EDITION: TafsirEdition = {slug: QE_SLUG, name: 'Ahsan-ul-Bayan', language_name: 'urdu', author_name: 'Hafiz Salahuddin Yusuf (translation: Muhammad Junagarhi)'};
 export const FALLBACK_TAFSIR: TafsirEdition[] = [
   QE_EDITION,
   {slug:'en-tafisr-ibn-kathir',name:'Tafsir Ibn Kathir (abridged)',language_name:'english',author_name:'Ibn Kathir'},
@@ -59,8 +60,15 @@ export const FALLBACK_TAFSIR: TafsirEdition[] = [
   {slug:'ur-tafsir-bayan-ul-quran',name:'Bayan ul Quran',language_name:'urdu',author_name:'Dr. Israr Ahmad'},
   {slug:'ar-tafsir-muyassar',name:'Tafsir Muyassar',language_name:'arabic',author_name:'King Fahd Complex'},
 ];
-/** Editions in the tafsir source that are broken (every ayah 404) or exact duplicates. */
-export const TAFSIR_HIDE = new Set(['ur-tafsir-fe-zalul-quran-syed-qatab','tafsir-bayan-ul-quran','tazkirul-quran-en','tazkiru-quran-ur']);
+/** Second copies of works the tafseer source publishes twice (the tarteel.ai / quran.com copy is kept; see TWINS below). */
+export const TAFSIR_HIDE = new Set(['ur-tafsir-fe-zalul-quran-syed-qatab','ur-tafsir-bayan-ul-quran','ur-tazkirul-quran','en-tazkirul-quran']);
+/**
+ * The same work published twice by the tafseer source: the tarteel.ai / quran.com edition (kept in the catalogue) and its
+ * twin. A reader's saved pick that is no longer offered moves to its twin.
+ */
+const TWINS: [string, string][] = [['tafsir-fe-zalul-quran-syed-qatab', 'ur-tafsir-fe-zalul-quran-syed-qatab'], ['tafsir-bayan-ul-quran', 'ur-tafsir-bayan-ul-quran'],
+  ['tazkiru-quran-ur', 'ur-tazkirul-quran'], ['tazkirul-quran-en', 'en-tazkirul-quran']];
+export const tafsirTwin = (slug: string) => TWINS.find(t => t.includes(slug))?.find(x => x !== slug);
 export const TAFSIR_RENAME: Record<string, string> = {'tafseer-ibn-e-kaseer-urdu':'Tafsir Ibn Kathir (fuller version)','tafsir-al-jalalayn':'Tafsir Al Jalalayn (alt. English)'};
 export const QUIZ_PART = 30;
 export const QUIZ_LEN = 10;

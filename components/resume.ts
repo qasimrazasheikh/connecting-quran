@@ -4,7 +4,8 @@ import {JUZ_PAGE, JUZ_START, SURAH_PAGE} from '@/lib/meta';
 
 export type LastRead = {s: number; a: number; name: string; page?: number; juz?: number};
 export const getLastRead = () => store.get<LastRead | null>('lastRead', null);
-export const setLastRead = (lr: LastRead) => store.set('lastRead', lr);
+export const LAST_READ_EVENT = 'noor:lastread';
+export const setLastRead = (lr: LastRead) => { store.set('lastRead', lr); window.dispatchEvent(new CustomEvent<LastRead>(LAST_READ_EVENT, {detail: lr})); };
 
 type At = {s: number; a: number; page?: number};
 /**
