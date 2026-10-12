@@ -1,6 +1,7 @@
 import {notFound} from 'next/navigation';
 import type {Metadata} from 'next';
 import TafseerPage from '@/components/TafseerPage';
+import type {StudyTab} from './step';
 import {readSettings} from './server-settings';
 import {getSurahList} from './quran';
 import {ayahQuote} from './views';
@@ -14,13 +15,13 @@ export async function parseAyah(params: Promise<{s: string; a: string}>) {
   if (surahs && a > surahs[s - 1].ayahs) notFound();
   return {s, a, name: surahs?.[s - 1]?.en || `Surah ${s}`};
 }
-export async function tafseerMeta(params: Promise<{s: string; a: string}>, tab: 'text' | 'videos'): Promise<Metadata> {
+export async function tafseerMeta(params: Promise<{s: string; a: string}>, tab: StudyTab): Promise<Metadata> {
   const {s, a, name} = await parseAyah(params);
   return tab === 'videos'
     ? {title: `Video lectures · ${name} ${s}:${a}`, description: `Dr Israr Ahmed and Nouman Ali Khan lectures on Surah ${name}.`}
     : {title: `Tafseer of ${name} ${s}:${a}`, description: `Read several Urdu, English and Arabic tafseers of Quran ${s}:${a} (Surah ${name}).`};
 }
-export async function TafseerRoute({params, tab}: {params: Promise<{s: string; a: string}>; tab: 'text' | 'videos'}) {
+export async function TafseerRoute({params, tab}: {params: Promise<{s: string; a: string}>; tab: StudyTab}) {
   const {s, a} = await parseAyah(params);
   const {settings} = await readSettings();
   const quote = await ayahQuote(s, a, settings).catch(() => null);

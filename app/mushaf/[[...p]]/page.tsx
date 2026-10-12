@@ -17,5 +17,5 @@ export default async function MushafPage({params, searchParams}: PageProps<'/mus
   const {settings} = await readSettings();
   let v;
   try{ v = await mushafView(p, settings); }catch(e){ return <ErrorBox msg={(e as Error).message} />; }
-  return <MushafView p={p} ayahs={v.ayahs} meta={v.meta} />;
+  return <MushafView p={p} ayahs={v.ayahs} meta={v.meta} at={at ? `${+at[1]}:${+at[2]}` : ''} />;
 }

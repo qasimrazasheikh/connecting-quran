@@ -2,6 +2,7 @@
 /* Browser-side calls to this site's own API routes, with a small in-memory cache. */
 import type {TafsirEdition, TransEdition} from './meta';
 import type {SegInfo} from './grammar';
+import type {RelatedItem, StudyLink, VideoCard} from './catalog';
 
 const cache = new Map<string, Promise<unknown>>();
 async function getJSON<T>(url: string): Promise<T> {
@@ -18,5 +19,8 @@ async function getJSON<T>(url: string): Promise<T> {
 }
 export const getEditions = () => getJSON<{trans: TransEdition[]; tafsir: TafsirEdition[]}>('/api/editions');
 export const getTafsir = (slug: string, s: number, a: number) => getJSON<{text: string}>(`/api/tafsir/${encodeURIComponent(slug)}/${s}/${a}`).then(d => d.text || '');
+export type Study = {links: StudyLink[]; videos: VideoCard[]; related: number};
+export const getRelated = (s: number, a: number, ip: boolean) => getJSON<{items: RelatedItem[]}>(`/api/related/${s}/${a}${ip ? '?script=ip' : ''}`).then(d => d.items);
+export const getStudy = (s: number, a: number) => getJSON<Study>(`/api/study/${s}/${a}`);
 export type WordInfo = {w: number; translit: string; meanEn: string; meanUr: string; type: string; root: string; lemma: string; segs: SegInfo[]};
 export const getWord = (s: number, a: number, q: {w?: number; t?: number}) => getJSON<WordInfo>(`/api/word/${s}/${a}?${q.w ? 'w=' + q.w : 't=' + q.t}`);

@@ -4,7 +4,7 @@ import {useEffect, useRef} from 'react';
 import {useApp} from './AppProvider';
 import Drawer from './Drawer';
 import TafseerPanel from './TafseerPanel';
-import {stepAyah} from '@/lib/step';
+import {stepAyah, studyHref} from '@/lib/step';
 import {btnGhost} from '@/lib/ui';
 
 export default function TafseerDrawer() {
@@ -19,7 +19,7 @@ export default function TafseerDrawer() {
       title={<span id="tafTitle">Tafseer · {surahs[s - 1]?.en ? surahs[s - 1].en + ' ' : ''}{s}:{a}</span>}
       foot={<>
         <button className={btnGhost} id="tafPrev" disabled={s === 1 && a === 1} onClick={() => go(-1)}>← Previous</button>
-        <Link className={btnGhost} id="tafOpenPage" href={`/${tafTab === 'videos' ? 'videos' : 'tafseer'}/${s}/${a}`} onClick={closeTafsir}>Open full page</Link>
+        <Link className={btnGhost} id="tafOpenPage" href={studyHref(tafTab, s, a)} onClick={closeTafsir}>Open full page</Link>
         <button className={btnGhost} id="tafNext" disabled={s === 114 && a === 6} onClick={() => go(1)}>Next →</button>
       </>}>
       <TafseerPanel s={s} a={a} />

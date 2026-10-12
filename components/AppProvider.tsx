@@ -1,11 +1,12 @@
 'use client';
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import type {StudyTab} from '@/lib/step';
 import {usePathname, useRouter} from 'next/navigation';
 import {COOKIE, COOKIE_KEYS, cookieValue, DEFAULT_SETTINGS, type Settings} from '@/lib/settings';
 import type {SurahInfo} from '@/lib/quran';
 
 export type Bookmark = {k: string; s: number; a: number; name: string; t: number};
-export type TafsirReq = {s: number; a: number; tab: 'text' | 'videos'} | null;
+export type TafsirReq = {s: number; a: number; tab: StudyTab} | null;
 /** `font`: the font family the tapped word was drawn in, so the card can draw it the same (Indo-Pak text has glyphs only its font has). */
 export type WordReq = {s: number; a: number; w?: number; t?: number; text: string; font?: string; rect: DOMRect; onAyah?: () => void} | null;
 
@@ -14,8 +15,8 @@ type Ctx = {
   bookmarks: Bookmark[]; toggleBookmark: (s: number, a: number) => boolean;
   toast: (msg: string) => void;
   settingsOpen: string | false; openSettings: (focus?: string) => void; closeSettings: () => void;
-  tafsir: TafsirReq; openTafsir: (s: number, a: number, tab?: 'text' | 'videos') => void; closeTafsir: () => void;
-  tafTab: 'text' | 'videos'; setTafTab: (t: 'text' | 'videos') => void;
+  tafsir: TafsirReq; openTafsir: (s: number, a: number, tab?: StudyTab) => void; closeTafsir: () => void;
+  tafTab: StudyTab; setTafTab: (t: StudyTab) => void;
   word: WordReq; openWord: (w: NonNullable<WordReq>) => void; closeWord: () => void;
 };
 const AppCtx = createContext<Ctx | null>(null);
@@ -45,7 +46,7 @@ export default function AppProvider({initial, hasCookie, surahs, children}: {ini
   const [toastMsg, setToastMsg] = useState(''); const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [settingsOpen, setSettingsOpen] = useState<string | false>(false);
   const [tafsir, setTafsir] = useState<TafsirReq>(null);
-  const [tafTab, setTafTab] = useState<'text' | 'videos'>('text');
+  const [tafTab, setTafTab] = useState<StudyTab>('text');
   const [word, setWord] = useState<WordReq>(null);
 
   const persist = useCallback((next: Settings) => {

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import type {Metadata} from 'next';
 import AyahList from '@/components/AyahList';
+import ReaderPicker from '@/components/ReaderPicker';
 import ErrorBox from '@/components/ErrorBox';
 import SurahName from '@/components/SurahName';
 import TajweedKey from '@/components/TajweedKey';
@@ -9,7 +10,8 @@ import {ChangeTranslations, PlayAll} from '@/components/ReaderBits';
 import {readSettings} from '@/lib/server-settings';
 import {getSurahList} from '@/lib/quran';
 import {surahView} from '@/lib/views';
-import {QUIZ_PART, VIDEO_SOURCES} from '@/lib/meta';
+import {QUIZ_PART} from '@/lib/meta';
+import {videoCards} from '@/lib/catalog';
 import {btnGhost, btnYt, chip, cx, rhead} from '@/lib/ui';
 import {Icon} from '@/components/Icons';
 
@@ -30,8 +32,10 @@ export default async function SurahPage({params}: P) {
   let v;
   try{ v = await surahView(n, settings); }catch(e){ return <ErrorBox msg={(e as Error).message} />; }
   const {info, surahs, meta, ayahs} = v;
+  const videos = await videoCards(n, null, info.en);
   return (
     <>
+      <ReaderPicker s={n} focus={focus} />
       <section className={rhead}>
         <div className="text-[40px] leading-normal text-brand"><SurahName n={n} prefix /></div>
         <h1 className="mb-0.5 mt-1 text-[22px] font-bold">{n}. {info.en}</h1>
@@ -44,12 +48,13 @@ export default async function SurahPage({params}: P) {
           <PlayAll label="Play surah" />
           <Link className={btnGhost} href={`/quiz/${n}/1`}>✎ Take quiz{info.ayahs > QUIZ_PART ? ` (${Math.ceil(info.ayahs / QUIZ_PART)} parts)` : ''}</Link>
         </div>
-        <div className="mt-3.5 border-t border-dashed border-line pt-3">
+        {videos.length > 0 && <div className="mt-3.5 border-t border-dashed border-line pt-3">
           <div className="mb-2 text-xs uppercase tracking-wider text-muted">Video lectures on this surah</div>
           <div className="flex flex-wrap justify-center gap-2">
-            {VIDEO_SOURCES.map(vs => <a key={vs.id} className={btnYt} href={vs.url(info.en)} target="_blank" rel="noopener"><Icon.play /> {vs.name} <span className="font-normal opacity-80">· {vs.lang}</span></a>)}
+            {/* a whole-surah video the curator added, else the series' search link */}
+            {videos.map(vs => <a key={vs.id} className={btnYt} href={vs.links.find(l => l.whole)?.url || vs.searchUrl} target="_blank" rel="noopener"><Icon.play /> {vs.name} <span className="font-normal opacity-80">· {vs.lang}</span></a>)}
           </div>
-        </div>
+        </div>}
         {n !== 1 && n !== 9 && <div className={cx(!meta.ip && 'no-ip')}><div className="bism" dir="rtl">{meta.bism}</div></div>}
       </section>
       {meta.tajweed && <TajweedKey />}

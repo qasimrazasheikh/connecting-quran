@@ -6,7 +6,7 @@ import {getEditions} from '@/lib/client-data';
 import {BISM_UTH, RECITERS, type TafsirEdition, type TransEdition} from '@/lib/meta';
 import type {Settings} from '@/lib/settings';
 import {cx, h4, segBtn, segWrap, sel} from '@/lib/ui';
-import {clearExtraTafsir} from './TafseerPanel';
+import {TLANGS} from './TafseerPanel';
 
 const BISM_IP = 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ';
 const opt = 'flex items-center gap-2.5 border-b border-line px-1 py-[7px] text-[14.5px] [&_input]:size-[17px] [&_input]:accent-brand';
@@ -31,7 +31,6 @@ export default function SettingsDrawer() {
   const toggleTaf = (slug: string, on: boolean) => {
     if (on && S.tafsirs.length >= 8){ toast('Up to 8 tafseers'); return; }
     if (!on && S.tafsirs.length <= 1){ toast('Keep at least one tafseer'); return; }
-    clearExtraTafsir(slug);
     set({tafsirs: on ? [...S.tafsirs, slug] : S.tafsirs.filter(x => x !== slug)});
   };
   const transGroup = (lang: string, title: string) => (
@@ -48,7 +47,10 @@ export default function SettingsDrawer() {
       {e.name}<small className="ml-auto text-right text-xs text-muted">{e.author_name || ''}</small></label>
   );
   const by = (l: string) => eds?.tafsir.filter(e => e.language_name.toLowerCase() === l) || [];
-  const arSel = by('arabic').some(e => S.tafsirs.includes(e.slug));
+  // same language switch as the Study panel; defaults to the language of the first pick
+  const firstLang = TLANGS.find(x => x[2] === eds?.tafsir.find(e => e.slug === S.tafsirs[0])?.language_name.toLowerCase())?.[0] ?? 'ur';
+  const tafLang = S.tafLang || firstLang, langOf = TLANGS.find(x => x[0] === tafLang)!;
+  const picked = (l: string) => by(l).filter(e => S.tafsirs.includes(e.slug)).length;
 
   return (
     <Drawer id="setDrawer" open={!!settingsOpen} onClose={closeSettings} title="Reading settings" label="Settings">
@@ -84,13 +86,17 @@ export default function SettingsDrawer() {
       <h4 className={h4}>Tafseer layout</h4>
       <Seg id="tafLay" value={S.tafLayout} onPick={v => set({tafLayout: v})} items={[['accordion', 'Accordion'], ['split', 'List + reader']]} />
       <div ref={tafRef} id="tafSet" className="scroll-mt-2">
-        <h4 className={h4}>Tafseers to show</h4>
+        <h4 className={h4}>Your tafseers</h4>
         {eds && <>
-          {by('urdu').map(tafRow)}{by('english').map(tafRow)}
-          <details open={arSel} className="mt-1.5"><summary className="cursor-pointer px-1 py-2 text-sm text-brand">Arabic tafseers ({by('arabic').length})</summary>{by('arabic').map(tafRow)}</details>
+          <div className={cx(segWrap, 'mb-2')} role="group" aria-label="Tafseer language" id="tafLangSeg">
+            {TLANGS.map(([code, label, name]) => (
+              <button key={code} data-lang={code} aria-pressed={tafLang === code} className={segBtn(tafLang === code)} onClick={() => set({tafLang: code})}>
+                {label} <span className="opacity-75">({by(name).length}{picked(name) ? ` · ${picked(name)} ✓` : ''})</span></button>))}
+          </div>
+          {by(langOf[2]).length ? by(langOf[2]).map(tafRow) : <p className="px-1 py-2 text-sm text-muted">No {langOf[1]} tafseers are available yet.</p>}
         </>}
       </div>
-      <p className="text-[13px] text-muted">Pick up to 8 tafseers. They show as expandable sections, in this order.</p>
+      <p className="text-[13px] text-muted">The Study panel lists every tafseer in the chosen language; the ones you tick (up to 8) come first and open by themselves.</p>
     </Drawer>
   );
 }
