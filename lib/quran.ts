@@ -11,15 +11,19 @@ class HttpError extends Error { constructor(public status: number, url: string){
  * Quran Foundation access token (OAuth client credentials, valid an hour). Kept in memory per server instance and
  * renewed a minute early. Without CLIENT_ID / CLIENT_SECRET (tests, self-hosting against a mirror) calls go unsigned.
  */
-let qfToken: {v: string; until: number} | null = null;
+let qfToken: {v: string; until: number} | null = null, qfWarned = false;
 async function qfHeaders(renew = false): Promise<Record<string, string>> {
   const id = process.env.CLIENT_ID, secret = process.env.CLIENT_SECRET;
-  if (!id || !secret) return {};
+  if (!id || !secret){
+    // the real API refuses unsigned calls, and pages then quietly fall back to AlQuran Cloud's text: say so in the log
+    if (!qfWarned && !process.env.QURAN_COM_API){ qfWarned = true; console.warn('CLIENT_ID / CLIENT_SECRET not set: Quran Foundation API calls will fail'); }
+    return {};
+  }
   if (renew || !qfToken || Date.now() > qfToken.until){
     const r = await fetch(API.qfAuth, {method: 'POST', cache: 'no-store',
       headers: {Authorization: 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded'},
       body: 'grant_type=client_credentials&scope=content'});
-    if (!r.ok) throw new HttpError(r.status, API.qfAuth);
+    if (!r.ok){ console.warn(`Quran Foundation login failed (HTTP ${r.status}): check CLIENT_ID / CLIENT_SECRET`); throw new HttpError(r.status, API.qfAuth); }
     const d = await r.json() as {access_token: string; expires_in: number};
     qfToken = {v: d.access_token, until: Date.now() + (d.expires_in - 60) * 1000};
   }
@@ -28,7 +32,7 @@ async function qfHeaders(renew = false): Promise<Record<string, string>> {
 async function qfFetch(url: string): Promise<unknown> {
   let r = await fetch(url, {cache: 'no-store', headers: await qfHeaders()});
   if (r.status === 401) r = await fetch(url, {cache: 'no-store', headers: await qfHeaders(true)});
-  if (!r.ok) throw new HttpError(r.status, url);
+  if (!r.ok){ console.warn(`Quran Foundation API: HTTP ${r.status} for ${url}`); throw new HttpError(r.status, url); }
   return r.json();
 }
 /** Cached by URL alone: fetch()'s own cache would key on the token header and start over every hour. */

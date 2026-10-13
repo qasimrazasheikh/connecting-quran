@@ -10,8 +10,10 @@ export function stripBismillah(text: string, surah: number, ayah: number) {
  * Tanzil's Uthmani text (alquran.cloud) puts a small low meem (U+06ED) after fathatan/dammatan before idgham/ikhfa,
  * which only Tanzil's own font hides; ours draws it as a stray م (e.g. أَئِمَّةً in 21:73). quran.com's text has none
  * there. After kasratan it is the real iqlab mark, so that one stays.
+ * The Hafs font follows the QPC encoding, where sukun is U+06E1 and U+0652 is the small circle over a silent letter;
+ * Tanzil uses U+0652 for sukun and U+06DF for that circle, which the font draws as a black dotted disc. Swap them.
  */
-export const fixTanzil = (t: string) => String(t || '').replace(/([ًٌ])ۭ/g, '$1');
+export const fixTanzil = (t: string) => String(t || '').replace(/([ًٌ])ۭ/g, '$1').replace(/ْ/g, 'ۡ').replace(/۟/g, 'ْ');
 /** Indo-Pak text cleanup: hidden direction marks / zero-width spaces split words; backup source has marks the font can't draw. */
 export const cleanIP = (t: string) => String(t || '')
   .replace(/[​‎‏﻿]/g, '').replace(/[  ]/g, ' ')
