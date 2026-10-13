@@ -42,7 +42,7 @@ export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
           <p className="m-0 max-w-[520px] opacity-90">Arabic text with Urdu and English translations, and tafseer for every ayah. Pick a Surah or Juz to begin.</p>
           <Link className={cx(btn, 'mt-3.5 !border-white !bg-white !text-hero1')} href={mushafHref(lr)}><Icon.book /> Open Mushaf (Arabic only)</Link>
         </div>
-        <div className="font-ar text-[34px] leading-relaxed text-accent2 [text-shadow:0_2px_20px_rgba(0,0,0,.25)]" dir="rtl">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+        <div className="font-q text-[34px] leading-relaxed text-accent2 [text-shadow:0_2px_20px_rgba(0,0,0,.25)]" dir="rtl">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
       </section>
       {lr && <div className="mt-4 flex items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-3.5 shadow-card">
         <div className={numBadge}><Icon.book /></div>

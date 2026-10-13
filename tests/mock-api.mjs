@@ -28,6 +28,8 @@ const ay = (id, s, from, to) => { const out = []; for (let a = from; a <= to; a+
 const json = (res, body, status = 200) => { res.writeHead(status, {'content-type': 'application/json'}); res.end(JSON.stringify(body)); };
 const words = (k, lang) => { const [s, a] = k.split(':').map(Number); const t = ayText('quran-uthmani', s, a).replace(BISM, '').split(' ');
   return t.map((w, i) => ({char_type_name: 'word', text_indopak: i === 0 ? 'وَ هُوَ' : w, translation: {text: `${lang}-m${i + 1}`}, transliteration: {text: 'tr' + (i + 1)}})).concat([{char_type_name: 'end'}]); };
+/** QPC Hafs text as the API sends it: no Bismillah, ayah number at the end. */
+const qpc = k => { const [s, a] = k.split(':').map(Number); return ayText('quran-uthmani', s, a).replace(BISM, '') + ' ' + String(a).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]); };
 const pageKeys = pg => pg === 1 ? ['1:1', '1:2', '1:3', '1:4', '1:5', '1:6'] : pg === 2 ? ['1:7', '2:1', '2:2'] : ['2:3', '2:4'];
 
 http.createServer((req, res) => {
@@ -46,17 +48,15 @@ http.createServer((req, res) => {
   const versesKeys = () => q.get('page_number') ? pageKeys(+q.get('page_number'))
     : q.get('chapter_number') ? Array.from({length: COUNT(+q.get('chapter_number'))}, (_, k) => q.get('chapter_number') + ':' + (k + 1))
     : q.get('juz_number') ? ['1:1', '1:2', '2:1', '2:2'] : [q.get('verse_key')];
-  if (p === '/qc/quran/verses/uthmani')
-    return json(res, {verses: versesKeys().map(k => ({verse_key: k, text_uthmani: ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '')}))});
   if ((m = p.match(/^\/qc\/quran\/verses\/(indopak|indopak_nastaleeq)$/))){
     const keys = versesKeys();
     return json(res, {verses: keys.map(k => ({verse_key: k, ['text_' + m[1]]: (k === '1:1' ? 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ' : 'وَ هُوَ ' + ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '').split(' ').slice(1).join(' ')) + '​‏'}))});
   }
   if ((m = p.match(/^\/qc\/verses\/by_(chapter|juz|page)\/(\d+)$/))) {
     const n = +m[2], keys = m[1] === 'chapter' ? Array.from({length: COUNT(n)}, (_, k) => n + ':' + (k + 1)) : m[1] === 'page' ? pageKeys(n) : ['1:1', '1:2', '2:1', '2:2'];
-    return json(res, {pagination: {next_page: null}, verses: keys.map(k => ({verse_key: k, words: words(k, q.get('language'))}))});
+    return json(res, {pagination: {next_page: null}, verses: keys.map(k => ({verse_key: k, qpc_uthmani_hafs: qpc(k), words: words(k, q.get('language'))}))});
   }
-  if ((m = p.match(/^\/qc\/verses\/by_key\/(\d+:\d+)$/))) return json(res, {verse: {words: words(m[1], q.get('language'))}});
+  if ((m = p.match(/^\/qc\/verses\/by_key\/(\d+:\d+)$/))) return json(res, {verse: {verse_key: m[1], qpc_uthmani_hafs: qpc(m[1]), words: words(m[1], q.get('language'))}});
   // ---- tafsir_api
   if (p === '/tafsir/editions.json') return json(res, [
     {slug: 'en-tafisr-ibn-kathir', name: 'Ibn Kathir', language_name: 'english', author_name: 'IK'},

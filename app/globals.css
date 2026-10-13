@@ -77,6 +77,7 @@
   --color-bad: #d64545;
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-ar: "Scheherazade New", "Amiri Quran", serif;
+  --font-q: "UthmanicHafs", "Scheherazade New", serif;
   --font-amiri: "Amiri Quran", "Amiri", serif;
   --font-ur: "Noto Nastaliq Urdu", serif;
   --font-ip: "IndoPak Nastaleeq", "Scheherazade New", serif;
@@ -84,17 +85,14 @@
   --shadow-card: var(--shadow);
 }
 
-/* Surah-name calligraphy, as on quran.com: the text "001"…"114" is drawn as that surah's name (linked from quran.com's public repo, not redistributed) */
-@font-face{font-family:"surahnames";font-display:block;
-  src:url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/surah-names/v1/sura_names.woff2") format("woff2"),
-      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/surah-names/v1/sura_names.woff") format("woff")}
-
-/* Indo-Pak Quran font: the same face and sources quran.com declares (src/styles/fonts.scss), linked from their public repo, not redistributed */
+/* Quran fonts, served from public/fonts: the same faces quran.com declares (src/styles/fonts.scss) */
+/* KFGQPC Uthmanic Script Hafs, made for the QPC Hafs text (getUthmani); it draws an ayah number as the ayah-end sign */
+@font-face{font-family:"UthmanicHafs";font-display:swap;
+  src:local("KFGQPC HAFS Uthmanic Script"),url("/fonts/UthmanicHafs1Ver18.woff2") format("woff2")}
+/* Surah-name calligraphy: the text "001"…"114" is drawn as that surah's name */
+@font-face{font-family:"surahnames";font-display:block;src:url("/fonts/sura_names.woff2") format("woff2")}
 @font-face{font-family:"IndoPak Nastaleeq";font-display:swap;
-  src:local("AlQuran IndoPak by QuranWBW"),
-      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2") format("woff2"),
-      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff") format("woff"),
-      url("https://cdn.jsdelivr.net/gh/quran/quran.com-frontend-next@master/public/fonts/quran/hafs/nastaleeq/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.ttf") format("truetype")}
+  src:local("AlQuran IndoPak by QuranWBW"),url("/fonts/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2") format("woff2")}
 
 @layer base{
 html,body{margin:0}
@@ -110,13 +108,14 @@ button{cursor:pointer}
 
 @layer components{
   /* Quran text */
-  .q-ar{font-family:var(--font-ar);direction:rtl;text-align:right;font-size:var(--ar-size);line-height:2.2}
+  .q-ar{font-family:var(--font-q);direction:rtl;text-align:right;font-size:var(--ar-size);line-height:2.2}
   .ip .q-ar,.q-ar.is-ip{font-family:var(--font-ip);line-height:2.5}
-  .endmark{font-family:var(--font-amiri);color:var(--accent);font-size:.8em;margin-right:4px}
-  .bism{font-family:var(--font-ar);font-size:30px;text-align:center;margin:14px 0 4px}
+  /* the Hafs font draws the bare ayah number as the ayah-end sign */
+  .endmark{font-family:var(--font-q);color:var(--accent);margin-right:2px}
+  .bism{font-family:var(--font-q);font-size:30px;text-align:center;margin:14px 0 4px}
   .ip .bism{font-family:var(--font-ip);line-height:2.2}
   /* a reader page whose Indo-Pak text could not load falls back to Uthmani */
-  .ip .no-ip .q-ar,.ip .no-ip .bism{font-family:var(--font-ar);line-height:2.2}
+  .ip .no-ip .q-ar,.ip .no-ip .bism{font-family:var(--font-q);line-height:2.2}
   .urdu{font-family:var(--font-ur);direction:rtl;text-align:right;line-height:2.3}
   .tr-text{font-size:var(--tr-size)}
   .tr-text.urdu{font-size:calc(var(--tr-size) + 1px)}
@@ -150,7 +149,7 @@ button{cursor:pointer}
   .tafsir.rtl{direction:rtl;text-align:right}
   .tafsir.arabic{font-family:var(--font-ar);font-size:calc(var(--tr-size) + 4px);line-height:2;direction:rtl;text-align:right}
   .tafsir h1,.tafsir h2,.tafsir h3,.tafsir h4{font-size:1.05em;margin:1em 0 .4em}
-  .tafsir .qar{font-family:var(--font-ar);font-size:1.15em;line-height:2.3;color:var(--brand);unicode-bidi:isolate;margin:0 .2em}
+  .tafsir .qar{font-family:var(--font-q);font-size:1.15em;line-height:2.3;color:var(--brand);unicode-bidi:isolate;margin:0 .2em}
   .ip .tafsir .qar{font-family:var(--font-ip);line-height:2.4}
 
   /* search highlight */
