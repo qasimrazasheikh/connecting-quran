@@ -12,7 +12,7 @@ function Prompt({q, n, small}: {q: Question; n: number; small?: boolean}) {
   return (
     <>
       <div className={small ? '' : 'mb-1.5 text-base'}>{q.prompt}{q.promptRef && <span className="text-[13px] text-muted"> ({q.promptRef})</span>}</div>
-      {q.word && <div className={cx('font-ar leading-relaxed text-brand', small ? 'text-[30px]' : 'my-1.5 text-center text-[44px]')} dir="rtl">{q.word}</div>}
+      {q.word && <div className={cx('font-q leading-relaxed text-brand', small ? 'text-[30px]' : 'my-1.5 text-center text-[44px]')} dir="rtl">{q.word}</div>}
       {q.arTokens && <div className="q-ar" style={{fontSize: small ? 22 : 'calc(var(--ar-size) * .9)', lineHeight: 2}}>
         {q.arTokens.map((t, i) => <span key={i}>{i ? ' ' : ''}{i === q.blank ? <span className="mx-[.2em] inline-block min-w-[3.2em] border-b-[3px] border-accent" /> : t}</span>)}</div>}
       {q.trans && <div className={cx('rounded-xl bg-surface2 px-3.5 py-3', q.transUr ? 'urdu text-[17px]' : 'text-[15.5px] leading-relaxed', small && '!text-sm')} dir={q.transUr ? 'rtl' : undefined}>{q.trans}</div>}

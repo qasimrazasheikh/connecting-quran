@@ -1,11 +1,41 @@
 /** Server-side data access. Every external call goes through here and is cached (see REVALIDATE). */
+import {unstable_cache} from 'next/cache';
 import {API, REVALIDATE} from './config';
 import {catalogTafsirs} from './catalog';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
 import {cleanIP, fixTanzil, type QWord} from './text';
 
 class HttpError extends Error { constructor(public status: number, url: string){ super(`HTTP ${status} for ${url}`); } }
+
+/**
+ * Quran Foundation access token (OAuth client credentials, valid an hour). Kept in memory per server instance and
+ * renewed a minute early. Without CLIENT_ID / CLIENT_SECRET (tests, self-hosting against a mirror) calls go unsigned.
+ */
+let qfToken: {v: string; until: number} | null = null;
+async function qfHeaders(renew = false): Promise<Record<string, string>> {
+  const id = process.env.CLIENT_ID, secret = process.env.CLIENT_SECRET;
+  if (!id || !secret) return {};
+  if (renew || !qfToken || Date.now() > qfToken.until){
+    const r = await fetch(API.qfAuth, {method: 'POST', cache: 'no-store',
+      headers: {Authorization: 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'grant_type=client_credentials&scope=content'});
+    if (!r.ok) throw new HttpError(r.status, API.qfAuth);
+    const d = await r.json() as {access_token: string; expires_in: number};
+    qfToken = {v: d.access_token, until: Date.now() + (d.expires_in - 60) * 1000};
+  }
+  return {'x-auth-token': qfToken.v, 'x-client-id': id};
+}
+async function qfFetch(url: string): Promise<unknown> {
+  let r = await fetch(url, {cache: 'no-store', headers: await qfHeaders()});
+  if (r.status === 401) r = await fetch(url, {cache: 'no-store', headers: await qfHeaders(true)});
+  if (!r.ok) throw new HttpError(r.status, url);
+  return r.json();
+}
+/** Cached by URL alone: fetch()'s own cache would key on the token header and start over every hour. */
+const qfCached = unstable_cache(qfFetch, ['qf'], {revalidate: REVALIDATE});
+
 async function getJSON<T>(url: string, revalidate = REVALIDATE): Promise<T> {
+  if (url.startsWith(API.quranCom)) return qfCached(url) as Promise<T>;
   const r = await fetch(url, {next: {revalidate}});
   if (!r.ok) throw new HttpError(r.status, url);
   return r.json() as Promise<T>;
@@ -55,13 +85,20 @@ export async function getAyahEditions(s: number, a: number, ids: string[]): Prom
 export type IPKind = 'chapter' | 'juz' | 'page' | 'verse';
 const versesQuery = (kind: IPKind, id: string | number) => ({chapter: `chapter_number=${id}`, juz: `juz_number=${id}`, page: `page_number=${id}`, verse: `verse_key=${id}`}[kind]);
 /**
- * quran.com's Uthmani text, map "s:a" -> text (no Bismillah on ayah 1). This is the Arabic the site shows: it matches
- * quran.com, and its words are numbered like quran.com's word data and QUL's (related ayahs).
+ * quran.com's QPC Uthmani Hafs text, map "s:a" -> text (no Bismillah on ayah 1). This is the Arabic the site shows, in
+ * the KFGQPC Hafs font quran.com pairs it with. Pause marks sit on their word, so its words are numbered like quran.com's
+ * word data and QUL's (related ayahs). The API ends each ayah with its number, which is dropped here (AyahText adds it).
  */
 export async function getUthmani(kind: IPKind, id: string | number): Promise<Record<string, string>> {
-  const d = await getJSON<{verses: {verse_key: string; text_uthmani: string}[]}>(`${API.quranCom}/quran/verses/uthmani?${versesQuery(kind, id)}`);
-  if (!d.verses?.length) throw new Error('empty');
-  return Object.fromEntries(d.verses.map(v => [v.verse_key, v.text_uthmani]));
+  type V = {verse_key: string; qpc_uthmani_hafs: string};
+  const vs: V[] = [];
+  if (kind === 'verse') vs.push((await getJSON<{verse: V}>(`${API.quranCom}/verses/by_key/${id}?fields=qpc_uthmani_hafs`)).verse);
+  else for (let page = 1; page; ){
+    const d = await getJSON<{verses: V[]; pagination?: {next_page: number | null}}>(`${API.quranCom}/verses/by_${kind}/${id}?fields=qpc_uthmani_hafs&per_page=1000&page=${page}`);
+    vs.push(...(d.verses || [])); page = d.pagination?.next_page || 0;
+  }
+  if (!vs.length || !vs[0]?.qpc_uthmani_hafs) throw new Error('empty');
+  return Object.fromEntries(vs.map(v => [v.verse_key, v.qpc_uthmani_hafs.replace(/\s*[٠-٩]+$/, '').trim()]));
 }
 export type IPEdition = 'nastaleeq' | 'legacy';
 export async function getIndoPak(kind: IPKind, id: string | number, edition: IPEdition = 'nastaleeq'): Promise<Record<string, string>> {

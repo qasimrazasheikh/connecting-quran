@@ -36,7 +36,7 @@ export default function AyahText({s, a, words, wbw, className, endmark = true, o
           </span></Fragment>
         );
       })}
-      {endmark && !ownEnd && <> <span className="endmark">﴿{arNum(a)}﴾</span></>}
+      {endmark && !ownEnd && <> <span className="endmark">{arNum(a)}</span></>}
     </span>
   );
 }

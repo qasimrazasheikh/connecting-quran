@@ -23,7 +23,8 @@ npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah J
 ```
 
 Env (`.env.local`, and Vercel project settings): `DATABASE_URL` (Neon), `ADMIN_PASSWORD` (8+ chars), `ADMIN_SECRET`
-(32+ random chars, signs the login cookie). Without `DATABASE_URL` the site runs on the built-in lists.
+(32+ random chars, signs the login cookie), `CLIENT_ID` / `CLIENT_SECRET` (Quran Foundation API, production client).
+Without `DATABASE_URL` the site runs on the built-in lists.
 
 Offline tests (need a build first; the scripts are bash and write logs to /tmp — use Git Bash on Windows):
 
@@ -82,6 +83,11 @@ new external call, add a matching mock route there or the e2e run will break.
   draw and ends each ayah with a font-specific end token (`IP_END`, `ipBody`). For copying, the `legacy` edition and
   `plainIP` are used. Changes to Arabic text handling need checking by eye in both scripts (and in popovers like the word card).
 - **Fonts** are bundled via `@fontsource/*` packages imported in `app/layout.tsx` — don't add Google Fonts requests.
+  The Quran fonts (KFGQPC Uthmanic Hafs, Indo-Pak Nastaleeq, surah names) are files in `public/fonts`, declared in
+  `globals.css`. Uthmani text is quran.com's QPC Hafs text (`getUthmani`), drawn with `--font-q`; the font turns a bare
+  Arabic-Indic number into the ayah-end sign (`.endmark`).
+- **Quran Foundation API:** every `API.quranCom` call is signed with an OAuth token (`qfHeaders` in `quran.ts`) and cached
+  by URL with `unstable_cache` (fetch's own cache would key on the hourly token).
 - **Theming:** colour tokens are CSS variables in `app/globals.css` (3 palettes × light/dark, `data-theme` on `<html>`);
   Tailwind colours read those variables. Use the tokens rather than hard-coded colours.
 - Old hash links from the single-file site (`#/surah/2/255`) are redirected client-side in `AppProvider` — keep them working.
