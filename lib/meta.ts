@@ -51,7 +51,7 @@ export const FALLBACK_TRANS: TransEdition[] = [
 export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string};
 export const QE_SLUG = 'qe-urdu-junagarhi';
 /** QuranEnc's Urdu Junagarhi translation; its notes are Ahsan-ul-Bayan (Hafiz Salahuddin Yusuf). */
-export const QE_EDITION: TafsirEdition = {slug: QE_SLUG, name: 'Ahsan-ul-Bayan', language_name: 'urdu', author_name: 'Hafiz Salahuddin Yusuf (translation: Muhammad Junagarhi)'};
+export const QE_EDITION: TafsirEdition = {slug: QE_SLUG, name: 'احسن البیان', language_name: 'urdu', author_name: 'حافظ صلاح الدین یوسف (ترجمہ: محمد جوناگڑھی)'};
 export const FALLBACK_TAFSIR: TafsirEdition[] = [
   QE_EDITION,
   {slug:'en-tafisr-ibn-kathir',name:'Tafsir Ibn Kathir (abridged)',language_name:'english',author_name:'Ibn Kathir'},

@@ -4,7 +4,10 @@ export const API = {
   /** Quran Foundation's Content API (quran.com's data). Needs CLIENT_ID / CLIENT_SECRET, see qfHeaders in quran.ts. */
   quranCom: process.env.QURAN_COM_API ?? 'https://apis.quran.foundation/content/api/v4',
   qfAuth: process.env.QF_AUTH_URL ?? 'https://oauth2.quran.foundation/oauth2/token',
-  tafsir: process.env.TAFSIR_API ?? 'https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir',
+  /** Tafseer files straight from GitHub: about 1 s per file, where jsDelivr took 3–45 s for files it had not cached yet. */
+  tafsir: process.env.TAFSIR_API ?? 'https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir',
+  /** Same files through jsDelivr, used when GitHub fails or is slow (none when TAFSIR_API points elsewhere, e.g. tests). */
+  tafsirBackup: process.env.TAFSIR_BACKUP_API ?? (process.env.TAFSIR_API ? '' : 'https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir'),
   ipBackup: process.env.IP_BACKUP_API ?? 'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/ara-quranindopak',
   morph: process.env.MORPH_URL ?? 'https://cdn.jsdelivr.net/gh/mustafa0x/quran-morphology@master/quran-morphology.txt',
   quranEnc: process.env.QURANENC_API ?? 'https://quranenc.com/api/v1',

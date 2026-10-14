@@ -5,7 +5,7 @@ import Drawer from './Drawer';
 import {getEditions} from '@/lib/client-data';
 import {BISM_UTH, RECITERS, type TafsirEdition, type TransEdition} from '@/lib/meta';
 import type {Settings} from '@/lib/settings';
-import {cx, h4, segBtn, segWrap, sel} from '@/lib/ui';
+import {cx, h4, natCls, segBtn, segWrap, sel} from '@/lib/ui';
 import {TLANGS} from './TafseerPanel';
 
 const BISM_IP = 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ';
@@ -44,7 +44,7 @@ export default function SettingsDrawer() {
   );
   const tafRow = (e: TafsirEdition) => (
     <label key={e.slug} className={opt}><input type="checkbox" data-taf={e.slug} checked={S.tafsirs.includes(e.slug)} onChange={ev => toggleTaf(e.slug, ev.target.checked)} />
-      {e.name}<small className="ml-auto text-right text-xs text-muted">{e.author_name || ''}</small></label>
+      <span className={natCls(e.name)}>{e.name}</span><small className={cx('ml-auto text-right text-xs text-muted', natCls(e.author_name))}>{e.author_name || ''}</small></label>
   );
   const by = (l: string) => eds?.tafsir.filter(e => e.language_name.toLowerCase() === l) || [];
   // same language switch as the Study panel; defaults to the language of the first pick
