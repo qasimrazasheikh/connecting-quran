@@ -8,7 +8,7 @@ import type {RelatedItem, StudyLink, VideoCard} from '@/lib/catalog';
 import {tafsirTwin, type TafsirEdition} from '@/lib/meta';
 import type {StudyTab} from '@/lib/step';
 import {tafsirHtml} from '@/lib/tafsir-client';
-import {abtn, btnYt, cx, empty, segBtn, segWrap, sel} from '@/lib/ui';
+import {abtn, btnYt, cx, empty, natCls, segBtn, segWrap, sel} from '@/lib/ui';
 
 /* Kept while moving between ayahs: which sections are open. */
 const accOpen = new Set<string>();
@@ -72,7 +72,9 @@ function useTafsirList(s: number, a: number, lang: TLang) {
   const meta = (slug: string) => eds?.find(e => e.slug === slug);
   return {eds, err, list, picks, status, meta};
 }
-const sub = (m: TafsirEdition | undefined, pick: boolean) => [m?.author_name, pick && 'in your list'].filter(Boolean).join(' · ');
+/** Author (in its own script and font) · "in your list". */
+const sub = (m: TafsirEdition | undefined, pick: boolean) => <>
+  {m?.author_name && <bdi className={natCls(m.author_name)}>{m.author_name}</bdi>}{m?.author_name && pick && ' · '}{pick && 'in your list'}</>;
 /** Divider between the reader's picks and the other tafseers of the language. */
 const Others = ({n, lang}: {n: number; lang: TLang}) => <div className="mb-2 mt-3.5 text-[12px] font-semibold uppercase tracking-wider text-muted">Other {langText(lang)} tafseers ({n})</div>;
 
@@ -105,7 +107,7 @@ function Accordion({s, a, lang, more, onMore}: {s: number; a: number; lang: TLan
             {i === picks.length && i > 0 && <Others n={list.length - picks.length} lang={lang} />}
             <section data-slug={slug} className={cx('acc mb-2 overflow-hidden rounded-xl border bg-surface', isOpen ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--line))]' : 'border-line')}>
               <button className={cx('flex w-full items-center gap-2.5 border-0 px-3.5 py-3 text-left', isOpen ? 'bg-brand-soft' : 'bg-transparent hover:bg-surface2')} aria-expanded={isOpen} onClick={() => setOne(slug, !isOpen)}>
-                <span className="min-w-0 flex-1"><b className={cx('block text-[15px]', st === 'none' && 'text-muted')}>{m?.name || slug}</b><small className="text-[12.5px] text-muted">{sub(m, pick)}</small></span>
+                <span className="min-w-0 flex-1"><b className={cx('block text-[15px]', natCls(m?.name), st === 'none' && 'text-muted')}>{m?.name || slug}</b><small className="text-[12.5px] text-muted">{sub(m, pick)}</small></span>
                 <span className="whitespace-nowrap text-xs text-muted">{st === 'none' ? 'No note for this ayah' : st === 'error' ? 'Unavailable' : ''}</span>
                 <Icon.chev className={cx('flex-none transition-transform', isOpen ? 'rotate-180 text-brand' : 'text-muted')} />
               </button>
@@ -149,10 +151,10 @@ function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; m
               return (
                 <Fragment key={slug}>
                   {i === picks.length && i > 0 && <span className="hidden px-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted @[620px]:block">Other {langText(lang)}</span>}
-                  <button role="tab" data-slug={slug} aria-selected={on} onClick={() => update({tafLast: slug})}
+                  <button role="tab" data-slug={slug} aria-selected={on} title={(mm?.name || slug) + (mm?.author_name ? ' — ' + mm.author_name : '')} onClick={() => update({tafLast: slug})}
                     className={cx(item, on ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand')}>
-                    <b className={cx('max-w-full truncate text-sm leading-tight @[620px]:whitespace-normal', on ? 'text-brand' : st === 'none' ? 'text-muted' : '')}>{mm?.name || slug}</b>
-                    <small className="max-w-full truncate text-xs text-muted @[620px]:whitespace-normal">{sub(mm, pick)}</small>
+                    <b title={mm?.name || slug} className={cx('max-w-full text-xs leading-snug break-words @[620px]:whitespace-normal', natCls(mm?.name), on ? 'text-brand' : st === 'none' ? 'text-muted' : '')}>{mm?.name || slug}</b>
+                    <small title={mm?.author_name || ''} className={cx('max-w-full text-[11px] text-muted break-words @[620px]:whitespace-normal', natCls(mm?.author_name))}>{sub(mm, pick)}</small>
                     {(st === 'none' || st === 'error') && <span className="text-[11px] text-muted">{st === 'none' ? 'No note' : 'Unavailable'}</span>}
                   </button>
                 </Fragment>
@@ -161,7 +163,7 @@ function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; m
             {more > 0 && <button className={cx(item, 'border-dashed border-line bg-surface hover:border-brand')} onClick={onMore}><b className="text-sm">{more} more →</b><small className="text-xs text-muted">on other sites</small></button>}
           </nav>
           <section ref={readerRef} role="tabpanel" className="min-w-0 rounded-xl border border-line bg-surface @[620px]:flex-1">
-            <div className="rounded-t-xl border-b border-line bg-brand-soft px-3.5 py-2.5"><b className="block text-brand">{m?.name}</b><small className="text-[12.5px] text-muted">{sub(m, picks.includes(cur))}</small></div>
+            <div className="rounded-t-xl border-b border-line bg-brand-soft px-3.5 py-2.5"><b className={cx('block text-brand break-words', natCls(m?.name))}>{m?.name}</b><small className={cx('block text-[12.5px] text-muted break-words', natCls(m?.author_name))}>{sub(m, picks.includes(cur))}</small></div>
             <div className="px-4 py-3.5"><TafsirText key={cur + s + ':' + a} slug={cur} meta={m} s={s} a={a} /></div>
           </section>
         </div>
@@ -209,7 +211,8 @@ function MoreTafseers({links, lang, s, a}: {links: StudyLink[] | null; lang: TLa
   if (!links) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
   if (!links.length) return <div className={empty}>No {langText(lang)} tafseers on other sites yet.</div>;
   const qq = q.trim().toLowerCase();
-  const shown = links.filter(l => !qq || `${l.name} ${l.author} ${l.site}`.toLowerCase().includes(qq));
+  // the id (source slug) keeps English spellings like "tafheem" finding works named in Urdu
+  const shown = links.filter(l => !qq || `${l.name} ${l.author} ${l.site} ${l.id}`.toLowerCase().includes(qq));
   return (
     <div className="@container">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
@@ -221,7 +224,7 @@ function MoreTafseers({links, lang, s, a}: {links: StudyLink[] | null; lang: TLa
       <div className="grid gap-2 @[640px]:grid-cols-2">
         {shown.map(l => (
           <a key={l.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-ink no-underline hover:border-brand" href={l.url} target="_blank" rel="noopener">
-            <span className="min-w-0 flex-1"><b className="block truncate text-[14.5px]">{l.name}</b><small className="block truncate text-[12.5px] text-muted">{l.author}</small></span>
+            <span className="min-w-0 flex-1"><b className={cx('block truncate text-[14.5px]', natCls(l.name))}>{l.name}</b><small className={cx('block truncate text-[12.5px] text-muted', natCls(l.author))}>{l.author}</small></span>
             <span className="flex-none text-[12px] text-muted">{l.site} ↗</span>
           </a>))}
       </div>

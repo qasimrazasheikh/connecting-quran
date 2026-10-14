@@ -1,6 +1,7 @@
 /**
  * Fills the catalogue with what the site already offers: the tafseer editions (tafsir_api + QuranEnc) and the two
- * lecture series. Safe to re-run: existing rows (matched by slug) are left alone, so the curator's edits survive.
+ * lecture series. Safe to re-run: existing rows (matched by slug) are left alone, so the curator's edits survive (the one
+ * exception: Arabic/Urdu names still in the seed's old English spelling are switched to their own script).
  * Run: npm run db:seed
  */
 import {and, eq} from 'drizzle-orm';
@@ -8,12 +9,13 @@ import {neon} from '@neondatabase/serverless';
 import {drizzle} from 'drizzle-orm/neon-http';
 import {sources} from '../lib/db/schema.ts';
 import {QE_EDITION, TAFSIR_HIDE, TAFSIR_RENAME, VIDEO_SOURCES} from '../lib/meta.ts';
+import {TAFSIR_NATIVE} from '../lib/tafsir-names.ts';
 
 type NewSource = typeof sources.$inferInsert;
 const url = process.env.DATABASE_URL?.trim();
 if (!url) throw new Error('DATABASE_URL is not set (add it to .env.local)');
 const db = drizzle({client: neon(url)});
-const TAFSIR_API = process.env.TAFSIR_API ?? 'https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir';
+const TAFSIR_API = process.env.TAFSIR_API ?? 'https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir';
 
 const SCHOOL: Record<string, NewSource['school']> = {
   'en-tafsir-maarif-ul-quran': 'deobandi', 'ur-tafsir-bayan-ul-quran': 'deobandi', 'tafsir-bayan-ul-quran': 'deobandi',
@@ -95,11 +97,63 @@ const EQURAN: EQL[] = [
   ['tafheemulquranen', 'Tafheem-ul-Quran', 'Syed Abul Ala Maududi', 'general', 'en'],
 ];
 const REQUESTED = new Set(['tafheemulquran', 'tafheemulquranen']);
+/** The Urdu ones above in Urdu script: [name, author] by path. */
+const EQL_UR: Record<string, [string, string]> = {
+  ibnekaseer: ['تفسیر ابن کثیر', 'حافظ ابن کثیر (اردو: مولانا محمد جوناگڑھی)'],
+  tafheemulquran: ['تفہیم القرآن', 'سید ابو الاعلیٰ مودودی'],
+  maarifulquran: ['معارف القرآن', 'مفتی محمد شفیع'],
+  tadabburequran: ['تدبر قرآن', 'مولانا امین احسن اصلاحی'],
+  ahsanulbayan: ['احسن البیان', 'حافظ صلاح الدین یوسف'],
+  aasantarjumaquran: ['آسان ترجمۂ قرآن', 'مفتی محمد تقی عثمانی'],
+  fizilalalquran: ['فی ظلال القرآن', 'سید قطب'],
+  usmani: ['تفسیر عثمانی', 'مولانا شبیر احمد عثمانی'],
+  bayanulquran: ['بیان القرآن', 'ڈاکٹر اسرار احمد'],
+  taiseerulquran: ['تیسیر القرآن', 'مولانا عبدالرحمٰن کیلانی'],
+  majidi: ['تفسیر ماجدی', 'مولانا عبدالماجد دریابادی'],
+  jalalain: ['تفسیر جلالین', 'جلال الدین محلی و جلال الدین سیوطی'],
+  mazhari: ['تفسیر مظہری', 'قاضی ثناء اللہ پانی پتی'],
+  ibneabbas: ['تفسیر ابن عباس', 'اردو: حافظ محمد سعید احمد عاطف'],
+  alquranalkareem: ['القرآن الکریم', 'مولانا عبدالسلام بھٹوی'],
+  tibyanulquran: ['تبیان القرآن', 'علامہ غلام رسول سعیدی'],
+  qurtubi: ['تفسیر قرطبی', 'ابو عبداللہ القرطبی'],
+  duremansoor: ['در منثور', 'جلال الدین سیوطی'],
+  mutaliyaquran: ['مطالعۂ قرآن', 'پروفیسر حافظ احمد یار'],
+  anwarulbayan: ['انوار البیان', 'مولانا عاشق الٰہی مدنی'],
+  maarifulqurankandhalwi: ['معارف القرآن (کاندھلوی)', 'مولانا محمد ادریس کاندھلوی'],
+  jawahirulquran: ['جواہر القرآن', 'مولانا غلام اللہ خان'],
+  mualimulirfan: ['معالم العرفان', 'مولانا عبدالحمید سواتی'],
+  mufradatulquran: ['مفردات القرآن', 'امام راغب (اردو: مولانا عبدہ فیروزپوری)'],
+  haqqani: ['تفسیر حقانی', 'مولانا محمد عبدالحق حقانی'],
+  ruhulquran: ['روح القرآن', 'ڈاکٹر محمد اسلم صدیقی'],
+  fahmulquran: ['فہم القرآن', 'میاں محمد جمیل'],
+  madarikuttanzil: ['مدارک التنزیل', 'امام نسفی (اردو: فتح محمد جالندھری)'],
+  baghwi: ['تفسیر بغوی', 'حسین بن مسعود البغوی'],
+  ahsanuttafaseer: ['احسن التفاسیر', 'حافظ محمد سید احمد حسن'],
+  saadi: ['تفسیر سعدی', 'عبدالرحمٰن بن ناصر السعدی'],
+  ahkamulquran: ['احکام القرآن', 'امام ابوبکر جصاص'],
+  madani: ['تفسیر مدنی', 'مولانا اسحاق مدنی'],
+  mafhoomulquran: ['مفہوم القرآن', 'محترمہ رفعت اعجاز'],
+  asratuttanzil: ['اسرار التنزیل', 'مولانا محمد اکرم اعوان'],
+  ashrafulhawashi: ['اشرف الحواشی', 'شیخ محمد عبدہ الفلاح'],
+  anwarulbayanali: ['انوار البیان (محمد علی)', 'محمد علی پی سی ایس'],
+  baseeratequran: ['بصیرتِ قرآن', 'مولانا محمد آصف قاسمی'],
+  mazharulquran: ['مظہر القرآن', 'شاہ محمد مظہر اللہ دہلوی'],
+  tafseeralkitaab: ['تفسیر الکتاب', 'ڈاکٹر محمد عثمان'],
+  sirajulbayan: ['سراج البیان', 'علامہ محمد حنیف ندوی'],
+  kashfurrahman: ['کشف الرحمٰن', 'مولانا احمد سعید دہلوی'],
+  bayanulquranthanvi: ['بیان القرآن (تھانوی)', 'مولانا اشرف علی تھانوی'],
+  urwatulwusqa: ['عروۃ الوثقیٰ', 'علامہ عبدالکریم اثری'],
+};
+/** Every Arabic/Urdu source's name and author in its own script, by slug. */
+const NATIVE: Record<string, [string, string]> = {
+  ...TAFSIR_NATIVE, [QE_EDITION.slug]: [QE_EDITION.name, QE_EDITION.author_name ?? ''], 'link-quranohadith': ['مزید اردو تفاسیر', 'QuranoHadith.com'],
+  ...Object.fromEntries(Object.entries(EQL_UR).map(([path, v]) => [`eql-${path}`, v])),
+};
 
 async function main(){
   const eds = await fetch(`${TAFSIR_API}/editions.json`).then(r => r.json()) as {slug: string; name: string; author_name: string; language_name: string; source?: string}[];
   const rows: NewSource[] = [{
-    slug: QE_EDITION.slug, kind: 'tafseer', name: QE_EDITION.name, author: 'Muhammad Ibrahim Junagarhi', lang: 'ur',
+    slug: QE_EDITION.slug, kind: 'tafseer', name: 'Ahsan-ul-Bayan', author: 'Hafiz Salahuddin Yusuf (translation: Muhammad Junagarhi)', lang: 'ur',
     school: 'ahle-hadith', delivery: 'api', status: 'approved', sort: 1, homepage: 'https://quranenc.com/en/browse/urdu_junagarhi',
     attribution: 'QuranEnc · Rowwad Translation Center', notes: 'Licence to confirm against the QuranEnc terms of use.',
   }];
@@ -129,12 +183,21 @@ async function main(){
     urlPattern: `https://equranlibrary.com/tafseer/${path}/{s}/{a}`,
     notes: pending || (REQUESTED.has(path) ? 'Included at the curator’s request.' : ''),
   }));
+  // Arabic/Urdu sources are named in their own script. Rows already in the database switch over only while they still
+  // carry the English name and author an earlier seed gave them, so the curator's edits stay.
+  const was = new Map<string, [string, string]>();
+  rows.forEach(r => { const n = NATIVE[r.slug]; if (n){ was.set(r.slug, [r.name, r.author ?? '']); [r.name, r.author] = n; } });
   const done = await db.insert(sources).values(rows).onConflictDoNothing({target: sources.slug}).returning({slug: sources.slug, status: sources.status});
   const by = (s: string) => done.filter(r => r.status === s).length;
   // QuranEnc's Urdu notes are Ahsan-ul-Bayan (checked against eQuranLibrary, 2:3); rename it unless the curator already edited the name
-  const renamed = await db.update(sources).set({name: 'Ahsan-ul-Bayan', author: 'Hafiz Salahuddin Yusuf (translation: Muhammad Junagarhi)', updatedAt: new Date()})
+  const renamed = await db.update(sources).set({name: QE_EDITION.name, author: QE_EDITION.author_name, updatedAt: new Date()})
     .where(and(eq(sources.slug, QE_EDITION.slug), eq(sources.name, 'Junagarhi translation + tafseeri notes'))).returning({id: sources.id});
   if (renamed.length) console.log('Renamed the QuranEnc tafseer to Ahsan-ul-Bayan.');
+  const added = new Set(done.map(r => r.slug));
+  const native = await Promise.all([...was].filter(([slug]) => !added.has(slug)).map(([slug, [name, author]]) =>
+    db.update(sources).set({name: NATIVE[slug][0], author: NATIVE[slug][1], updatedAt: new Date()})
+      .where(and(eq(sources.slug, slug), eq(sources.name, name), eq(sources.author, author))).returning({id: sources.id})));
+  if (native.flat().length) console.log(`Renamed ${native.flat().length} Arabic/Urdu sources into their own script.`);
   console.log(`Added ${done.length} of ${rows.length} sources (approved ${by('approved')}, pending ${by('pending')}, hidden ${by('hidden')}); ${rows.length - done.length} already existed.`);
 }
 main().catch(e => { console.error(e.message); process.exit(1); });

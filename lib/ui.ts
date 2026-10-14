@@ -1,5 +1,7 @@
 /** Shared Tailwind class strings, so buttons, cards and chips look the same everywhere. */
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
+/** Font class for a name written in Arabic script ('' for Latin): letters only Urdu uses pick Nastaliq, else Naskh. */
+export const natCls = (t?: string) => !t || !/[\u0600-\u06FF]/.test(t) ? '' : /[ٹڈڑںےۓہھگکیۂ]/.test(t) ? 'nat-ur' : 'nat-ar';
 export const btn = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-brand bg-brand px-3.5 py-2 text-sm font-medium text-on-brand no-underline shadow-[0_4px_14px_color-mix(in_srgb,var(--brand)_28%,transparent)] disabled:cursor-default disabled:opacity-45 [&_svg]:size-4 [&_svg]:flex-none';
 export const btnGhost = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-brand bg-transparent px-3.5 py-2 text-sm font-medium text-brand no-underline disabled:cursor-default disabled:opacity-45 [&_svg]:size-4 [&_svg]:flex-none';
 export const btnYt = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-yt bg-yt px-3.5 py-2 text-sm font-medium !text-white no-underline [&_svg]:size-4 [&_svg]:flex-none';

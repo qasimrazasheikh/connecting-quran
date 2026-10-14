@@ -36,7 +36,8 @@ await p.click('#a-2-3 [data-act=tafsir]'); await p.waitForSelector('#tafDrawer .
 const th = await p.locator('#tafDrawer .tafsir').first().innerHTML();
 ok(!/script|onclick/.test(th), 'tafseer html sanitised', th.slice(0, 80));
 const names = await p.locator('#tafDrawer section.acc b').allInnerTexts();
-ok(names.length === 3 && ['IK Urdu', 'Bayan ul Quran'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'Muyassar'].includes(n)), 'accordion sections (Urdu by default)', names.join(' | '));
+ok(names.length === 3 && ['تفسیر ابن کثیر', 'بیان القرآن', 'احسن البیان'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'التفسير الميسر'].includes(n)), 'accordion sections (Urdu by default, in Urdu script)', names.join(' | '));
+ok(await p.locator('#tafDrawer section.acc b.nat-ur').count() === 3, 'Urdu names drawn in the Urdu font');
 await p.click('#tafDrawer [data-acc=expand]'); await p.waitForTimeout(500);
 ok(await p.locator('#tafDrawer section.acc [aria-expanded=true]').count() === names.length, 'expand all');
 ok(await p.locator('#tafDrawer .tafsir .qar').count() > 0, 'Quran quote marked inside Urdu tafseer');

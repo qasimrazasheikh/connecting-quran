@@ -2,6 +2,7 @@
 import {unstable_cache} from 'next/cache';
 import {API, REVALIDATE} from './config';
 import {catalogTafsirs} from './catalog';
+import {nativeName} from './tafsir-names';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
 import {cleanIP, fixTanzil, type QWord} from './text';
 
@@ -38,11 +39,17 @@ async function qfFetch(url: string): Promise<unknown> {
 /** Cached by URL alone: fetch()'s own cache would key on the token header and start over every hour. */
 const qfCached = unstable_cache(qfFetch, ['qf'], {revalidate: REVALIDATE});
 
-async function getJSON<T>(url: string, revalidate = REVALIDATE): Promise<T> {
+async function getJSON<T>(url: string, revalidate = REVALIDATE, timeoutMs?: number): Promise<T> {
   if (url.startsWith(API.quranCom)) return qfCached(url) as Promise<T>;
-  const r = await fetch(url, {next: {revalidate}});
+  const r = await fetch(url, {next: {revalidate}, signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined});
   if (!r.ok) throw new HttpError(r.status, url);
   return r.json() as Promise<T>;
+}
+
+/** A file from the tafseer source; on a failure other than 404 (or after 8 s), the same file from the backup mirror. */
+async function tafsirJSON<T>(path: string): Promise<T> {
+  try{ return await getJSON<T>(API.tafsir + path, REVALIDATE, 8000); }
+  catch(e){ if (!API.tafsirBackup || (e instanceof HttpError && e.status === 404)) throw e; return getJSON<T>(API.tafsirBackup + path); }
 }
 
 export type SurahInfo = {n: number; ar: string; en: string; mean: string; ayahs: number; type: string};
@@ -163,11 +170,11 @@ export async function getTafsirEditions(): Promise<TafsirEdition[]> {
   if (cat?.length) return cat;
   let list: TafsirEdition[];
   try{
-    const d = await getJSON<TafsirEdition[]>(`${API.tafsir}/editions.json`);
+    const d = await tafsirJSON<TafsirEdition[]>('/editions.json');
     list = d.filter(e => /english|urdu|arabic/i.test(e.language_name) && !TAFSIR_HIDE.has(e.slug)).map(e => TAFSIR_RENAME[e.slug] ? {...e, name: TAFSIR_RENAME[e.slug]} : e);
     if (!list.length) throw new Error('empty');
   }catch{ list = FALLBACK_TAFSIR.filter(e => e.slug !== QE_SLUG); }
-  return [QE_EDITION, ...list.filter(e => e.slug !== QE_SLUG)];
+  return [QE_EDITION, ...list.filter(e => e.slug !== QE_SLUG).map(nativeName)];
 }
 /** Tafseer text for one ayah ('' when the work has no note for it). */
 export async function getTafsirText(slug: string, s: number, a: number): Promise<string> {
@@ -178,7 +185,7 @@ export async function getTafsirText(slug: string, s: number, a: number): Promise
     return `ترجمہ: ${tr}` + (notes ? `\n\nتفسیری حواشی:\n${notes}` : '\n\n(اس آیت پر کوئی حاشیہ نہیں)');
   }
   if (!/^[a-z0-9-]+$/i.test(slug)) throw new Error('bad slug');
-  try{ return (await getJSON<{text?: string}>(`${API.tafsir}/${slug}/${s}/${a}.json`)).text || ''; }
+  try{ return (await tafsirJSON<{text?: string}>(`/${slug}/${s}/${a}.json`)).text || ''; }
   catch(e){ if (e instanceof HttpError && e.status === 404) return ''; throw e; }
 }
 
