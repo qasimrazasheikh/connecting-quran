@@ -48,13 +48,13 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-[color-mix(in_srgb,var(--surface)_82%,transparent)] backdrop-blur-[14px] backdrop-saturate-[1.4]">
-      <div className="relative mx-auto flex max-w-[1100px] items-center gap-2 px-3 py-2.5 md:gap-3 md:px-4">
-        <button className={cx(iconBtn, 'md:hidden')} aria-label="Menu" onClick={() => setOpen(o => !o)}><Icon.menu /></button>
-        <Link href="/" className="flex min-w-0 items-center gap-2 whitespace-nowrap text-base font-bold tracking-tight text-ink no-underline md:gap-2.5 md:text-lg">
-          <Logo className="size-[42px] shrink-0 rounded-[10px] md:size-[46px]" svgClass="size-[20px] md:size-[22px]" />
-          <span className="max-[419px]:hidden">Connecting Quran<small className="hidden text-[11px] font-medium tracking-wider text-muted min-[1521px]:block">QURAN · TRANSLATION · TAFSEER</small></span>
+      <div className="relative mx-auto flex max-w-[1100px] items-center gap-1.5 px-3 py-2.5 sm:gap-2 md:gap-3 md:px-4 max-[359px]:gap-1 max-[359px]:px-2">
+        <button className={cx(iconBtn, 'xl:hidden max-[359px]:size-8')} aria-label="Menu" onClick={() => setOpen(o => !o)}><Icon.menu /></button>
+        <Link href="/" className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-bold tracking-tight text-ink no-underline sm:gap-2 sm:text-base md:gap-2.5 md:text-lg max-[359px]:text-[11px]">
+          <Logo className="size-[42px] shrink-0 rounded-[10px] md:size-[46px] max-[359px]:size-8" svgClass="size-[20px] md:size-[22px]" />
+          <span className="leading-tight">Connecting Quran<small className="hidden text-[11px] font-medium tracking-wider text-muted min-[1521px]:block">QURAN · TRANSLATION · TAFSEER</small></span>
         </Link>
-        <nav className={cx('md:ml-1 md:flex md:gap-0.5 min-[1521px]:ml-3 min-[1521px]:gap-1',
+        <nav className={cx('xl:ml-1 xl:flex xl:gap-0.5 min-[1521px]:ml-3 min-[1521px]:gap-1',
           open ? 'absolute inset-x-0 top-full flex flex-col border-b border-line bg-surface px-4 py-2' : 'hidden')} onClick={() => setOpen(false)}
           onPointerDownCapture={refreshAt} onFocusCapture={refreshAt}>
           {NAV.map(n => (
@@ -66,10 +66,10 @@ export default function Header() {
         <div className="flex-1" />
         <form className="flex shrink-0 overflow-hidden rounded-[9px] border border-line bg-bg" onSubmit={go} title="Go to Surah:Ayah, e.g. 2:255">
           <input id="jumpIn" value={jump} onChange={e => setJump(e.target.value)} placeholder="2:255" aria-label="Go to Surah:Ayah"
-            className="w-[58px] border-0 bg-transparent px-2 py-[7px] text-ink outline-none md:w-[84px] min-[1521px]:w-[110px] min-[1521px]:px-2.5" />
-          <button className="shrink-0 border-0 bg-brand px-2.5 text-on-brand md:px-3" aria-label="Go">Go</button>
+            className="w-[48px] border-0 bg-transparent px-1 py-[7px] text-sm text-ink outline-none sm:w-[58px] sm:px-2 sm:text-base md:w-[84px] min-[1521px]:w-[110px] min-[1521px]:px-2.5" />
+          <button className="shrink-0 border-0 bg-brand px-2 text-sm text-on-brand sm:px-2.5 sm:text-base md:px-3" aria-label="Go">Go</button>
         </form>
-        <button className={cx(iconBtn, 'shrink-0')} id="setBtn" aria-label="Settings" onClick={() => openSettings()}><Icon.gear /></button>
+        <button className={cx(iconBtn, 'shrink-0 max-[359px]:size-8')} id="setBtn" aria-label="Settings" onClick={() => openSettings()}><Icon.gear /></button>
       </div>
     </header>
   );
