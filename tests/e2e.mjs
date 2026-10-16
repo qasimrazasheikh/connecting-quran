@@ -12,7 +12,7 @@ const p = await ctx.newPage();
 const errs = []; p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errs.push(m.text()); });
 const wav = fs.readFileSync(new URL('./silence.wav', import.meta.url));
 await ctx.route(/cdn\.jsdelivr\.net/, r => r.fulfill({body: "", contentType: "text/css"}));
-await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
+await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com|verses\.quran\.com|mirrors\.quranicaudio\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
 let fails = 0;
 const ok = (cond, msg, extra = '') => { console.log((cond ? '  ok  ' : '  FAIL') + ' ' + msg + (extra !== '' ? ' → ' + extra : '')); if (!cond) fails++; };
 const go = async u => { await p.goto(BASE + u); await p.waitForLoadState('networkidle', {timeout: 8000}).catch(() => {}); await p.waitForTimeout(300); };
@@ -38,8 +38,9 @@ ok(!/script|onclick/.test(th), 'tafseer html sanitised', th.slice(0, 80));
 const names = await p.locator('#tafDrawer section.acc b').allInnerTexts();
 ok(names.length === 3 && ['تفسیر ابن کثیر', 'بیان القرآن', 'احسن البیان'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'التفسير الميسر'].includes(n)), 'accordion sections (Urdu by default, in Urdu script)', names.join(' | '));
 ok(await p.locator('#tafDrawer section.acc b.nat-ur').count() === 3, 'Urdu names drawn in the Urdu font');
-await p.click('#tafDrawer [data-acc=expand]'); await p.waitForTimeout(500);
-ok(await p.locator('#tafDrawer section.acc [aria-expanded=true]').count() === names.length, 'expand all');
+await p.locator('#tafDrawer section.acc button[aria-expanded]').nth(1).click(); await p.waitForTimeout(500);
+ok(await p.locator('#tafDrawer section.acc [aria-expanded=true]').count() === 1 && await p.locator('#tafDrawer section.acc').nth(1).locator('[aria-expanded=true]').count() === 1, 'opening a tafseer closes the open one');
+await p.locator('#tafDrawer section.acc button[aria-expanded]').nth(0).click(); await p.waitForSelector('#tafDrawer .tafsir');
 ok(await p.locator('#tafDrawer .tafsir .qar').count() > 0, 'Quran quote marked inside Urdu tafseer');
 await p.click('#tafDrawer [data-lang=en]'); await p.waitForTimeout(500);
 const enNames = await p.locator('#tafDrawer section.acc b').allInnerTexts();
@@ -102,7 +103,7 @@ await p.click('#setBtn'); await p.click('#tjOn'); await p.click('#palSeg [data-v
 
 console.log('# juz, mushaf');
 await go('/juz/1');
-ok(await p.locator('article.ayah').count() === 4 && (await p.locator('main').innerText()).includes('2. Surah-2'), 'juz with surah headings');
+ok(await p.locator('article.ayah').count() === 4 && (await p.locator('main').innerText()).includes('2. Al-Baqarah'), 'juz with surah headings');
 await go('/mushaf/2'); await p.waitForSelector('.mayah');
 ok(await p.locator('.mayah').count() === 3 && await p.locator('.mtitle').count() === 1, 'mushaf page');
 await p.locator('.mayah .endmark').first().click(); await p.waitForSelector('#mMenu');
@@ -127,6 +128,16 @@ ok(true, 'videos tab changes URL');
 await shot('videos-page');
 await go('/tafseer'); await p.waitForURL('**/tafseer/1/1'); ok(true, '/tafseer redirects');
 
+console.log('# more tafseers (QuranoHadith text in the app)');
+await go('/tafseer/112/2?tab=more'); await p.click('[data-lang=ur]'); await p.click('a[data-embed]'); await p.waitForSelector('.tafsir.urdu');
+const qohNames = (await p.locator('section.acc button b').allInnerTexts()).join(' | ');
+ok(qohNames === 'احسن البیان | معارف القرآن', 'works with notes, Urdu names, no empty or Ibn Abbas', qohNames);
+ok(await p.locator('.tafsir.urdu p').count() === 2 && p.url().endsWith('/tafseer/112/2?tab=more'), 'first work open, reader stays on the page');
+await p.click('text=← All tafseers');
+await p.click('[data-lang=ar]'); await p.waitForURL(u => !u.search.includes('tab=more'), {timeout: 5000}).catch(() => {});
+ok(!p.url().includes('tab=more') && await p.locator('section.acc').count() > 0, 'Arabic has no "more tafseers": back to the Tafseer tab');
+await p.click('[data-lang=ur]');
+
 console.log('# translate bar');
 await go('/tafseer/2/5'); await p.waitForSelector('section.acc');
 await p.click('[data-lang=ar]'); await p.waitForSelector('section.acc[data-slug=ar-tafsir-muyassar]'); await p.waitForSelector('.tafsir.arabic');  // first Arabic tafseer opens by itself
@@ -138,8 +149,11 @@ await p.click('[data-lang=ur]');
 console.log('# search');
 await go('/search?q=mercy'); await p.waitForSelector('.sres');
 ok(await p.locator('.sres').count() === 50 && await p.locator('.sres mark').count() >= 50, '50 results with highlight');
+ok((await p.locator('.sres').first().innerText()).includes('qf translation with mercy'), 'search answered by Quran Foundation (footnote marks stripped)', await p.locator('.sres').first().innerText());
 await p.click('#sMore'); ok(await p.locator('.sres').count() === 100, 'show more');
 await go('/search?q=nothing'); ok((await p.locator('main').innerText()).includes('No results'), 'no results message');
+await go('/search?q=cloudonly'); await p.waitForSelector('.sres');
+ok((await p.locator('.sres').first().innerText()).includes('text with cloudonly') && !(await p.locator('.sres').first().innerText()).includes('qf '), 'nothing on Quran Foundation → AlQuran Cloud answers');
 await go('/search?q=' + encodeURIComponent('رحمة')); await p.waitForSelector('.sres');
 ok(await p.locator('.sres mark').count() > 0, 'Arabic highlight');
 await p.fill('#jumpIn', '2:255'); await p.press('#jumpIn', 'Enter'); await p.waitForURL('**/surah/2/255'); ok(true, 'jump box');

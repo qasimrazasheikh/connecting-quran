@@ -11,6 +11,8 @@ export const API = {
   ipBackup: process.env.IP_BACKUP_API ?? 'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/ara-quranindopak',
   morph: process.env.MORPH_URL ?? 'https://cdn.jsdelivr.net/gh/mustafa0x/quran-morphology@master/quran-morphology.txt',
   quranEnc: process.env.QURANENC_API ?? 'https://quranenc.com/api/v1',
+  /** QuranoHadith's site (no API: its ayah pages are read, see getQohTafsirs). */
+  qoh: process.env.QOH_URL ?? 'https://quranohadith.com',
 };
 /** Seconds to cache external data on the server (the Quran text and tafseer rarely change). */
 export const REVALIDATE = 60 * 60 * 24;

@@ -44,7 +44,8 @@ const PENDING: Record<string, string> = {
 const LANG: Record<string, NewSource['lang']> = {arabic: 'ar', urdu: 'ur', english: 'en'};
 
 /**
- * eQuranLibrary.com: 46 tafseers (mostly Urdu), linked per ayah. Their text is not copied (copyrighted, no API).
+ * eQuranLibrary.com: 46 tafseers (mostly Urdu), linked per ayah. No API: the Study panel pulls one ayah's note from
+ * their page on demand (getEqlTafsir, cached a day) and credits them; nothing is stored in the database.
  * [path name, title, author, school, lang?, pending reason?] — order as on their "all tafaseer" page.
  */
 type EQL = [string, string, string, NewSource['school'], ('ur' | 'en')?, string?];

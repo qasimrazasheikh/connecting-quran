@@ -11,7 +11,7 @@ async function run(name, vp, cookie){
   if (cookie) await ctx.addCookies([{name: 'noor_settings', value: encodeURIComponent(JSON.stringify(cookie)), url: BASE}]);
   await ctx.route(/cdn\.jsdelivr\.net/, r => r.fulfill({body: ''}));
   const wav = fs.readFileSync(new URL('./silence.wav', import.meta.url));
-  await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
+  await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com|verses\.quran\.com|mirrors\.quranicaudio\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(name + ': ' + e.message));
   const go = async u => { await p.goto(BASE + u); await p.waitForLoadState('networkidle', {timeout: 8000}).catch(() => {}); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(400); };

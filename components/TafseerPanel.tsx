@@ -3,25 +3,25 @@ import {Fragment, useEffect, useMemo, useRef, useState} from 'react';
 import {useApp} from './AppProvider';
 import {Icon} from './Icons';
 import Link from 'next/link';
-import {getEditions, getRelated, getStudy, getTafsir, type Study} from '@/lib/client-data';
+import {getEditions, getQoh, getRelated, getStudy, getTafsir, type QohTafsir, type Study} from '@/lib/client-data';
 import type {RelatedItem, StudyLink, VideoCard} from '@/lib/catalog';
 import {tafsirTwin, type TafsirEdition} from '@/lib/meta';
 import type {StudyTab} from '@/lib/step';
 import {tafsirHtml} from '@/lib/tafsir-client';
 import {abtn, btnYt, cx, empty, natCls, segBtn, segWrap, sel} from '@/lib/ui';
 
-/* Kept while moving between ayahs: which sections are open. */
+/* Kept while moving between ayahs: which section is open (at most one, so the page stays short). */
 const accOpen = new Set<string>();
 let accInit = false;
 
 type Status = Record<string, 'none' | 'error' | 'ok'>;
 
 /** Loads one tafseer's text for an ayah and shows it (or a "no note" message). */
-function TafsirText({slug, meta, s, a}: {slug: string; meta?: TafsirEdition; s: number; a: number}) {
+function TafsirText({slug, meta, language, s, a}: {slug: string; meta?: TafsirEdition; language?: string; s: number; a: number}) {
   const [html, setHtml] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [tick, setTick] = useState(0);
-  const lang = (meta?.language_name || '').toLowerCase();
+  const lang = (language || meta?.language_name || '').toLowerCase();
   useEffect(() => {
     let live = true; setHtml(null); setErr('');
     getTafsir(slug, s, a).then(t => { if (live) setHtml(t.trim() ? tafsirHtml(t, lang) : ''); }).catch(e => { if (live) setErr(e.message); });
@@ -72,9 +72,9 @@ function useTafsirList(s: number, a: number, lang: TLang) {
   const meta = (slug: string) => eds?.find(e => e.slug === slug);
   return {eds, err, list, picks, status, meta};
 }
-/** Author (in its own script and font) · "in your list". */
-const sub = (m: TafsirEdition | undefined, pick: boolean) => <>
-  {m?.author_name && <bdi className={natCls(m.author_name)}>{m.author_name}</bdi>}{m?.author_name && pick && ' · '}{pick && 'in your list'}</>;
+/** Author (in its own script and font). */
+const sub = (m: TafsirEdition | undefined, _pick: boolean) => <>
+  {m?.author_name && <bdi className={natCls(m.author_name)}>{m.author_name}</bdi>}</>;
 /** Divider between the reader's picks and the other tafseers of the language. */
 const Others = ({n, lang}: {n: number; lang: TLang}) => <div className="mb-2 mt-3.5 text-[12px] font-semibold uppercase tracking-wider text-muted">Other {langText(lang)} tafseers ({n})</div>;
 
@@ -83,19 +83,17 @@ function Accordion({s, a, lang, more, onMore}: {s: number; a: number; lang: TLan
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
   const [open, setOpen] = useState<Set<string>>(() => new Set(accOpen));
   // open the first tafseer the first time, and again when a language has none open
-  useEffect(() => { if (list.length && (!accInit || !list.some(x => accOpen.has(x)))){ accInit = true; accOpen.add(list[0]); setOpen(new Set(accOpen)); } }, [list]);
-  const setOne = (slug: string, on: boolean) => { if (on) accOpen.add(slug); else accOpen.delete(slug); setOpen(new Set(accOpen)); };
+  useEffect(() => { if (list.length && (!accInit || !list.some(x => accOpen.has(x)))){ accInit = true; accOpen.clear(); accOpen.add(list[0]); setOpen(new Set(accOpen)); } }, [list]);
+  // opening a tafseer closes the one that was open
+  const setOne = (slug: string, on: boolean) => { accOpen.clear(); if (on) accOpen.add(slug); setOpen(new Set(accOpen)); };
   if (err) return <div className={empty}>Could not load the tafseer list. {err}</div>;
   if (!eds) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
   if (!list.length) return <div className={empty}>No {langText(lang)} tafseers are available yet.</div>;
-  // "expand" opens the reader's picks; opening dozens of long tafseers at once would be slow
-  const mine = picks.length ? picks : list.slice(0, 1);
   return (
     <div>
       <div className="mb-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted">
         <span>{list.length} {langText(lang)} tafseer{list.length > 1 ? 's' : ''}{picks.length ? ` · ${picks.length} in your list` : ''} · ayah {s}:{a}</span><span className="flex-1" />
         {more > 0 && <button className={abtn} onClick={onMore} title="More tafseers on other sites"><Icon.link />More tafseers</button>}
-        <button className={abtn} data-acc="expand" onClick={() => { mine.forEach(x => accOpen.add(x)); setOpen(new Set(accOpen)); }}>{mine.length < list.length ? 'Expand mine' : 'Expand all'}</button>
         <button className={abtn} data-acc="collapse" onClick={() => { accOpen.clear(); setOpen(new Set()); }}>Collapse all</button>
         <button className={abtn} data-acc="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         <button className={abtn} data-acc="layout" title="Switch to list + reader layout" onClick={() => update({tafLayout: 'split'})}><Icon.book />List view</button>
@@ -154,7 +152,7 @@ function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; m
                   <button role="tab" data-slug={slug} aria-selected={on} title={(mm?.name || slug) + (mm?.author_name ? ' — ' + mm.author_name : '')} onClick={() => update({tafLast: slug})}
                     className={cx(item, on ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand')}>
                     <b title={mm?.name || slug} className={cx('max-w-full text-xs leading-snug break-words @[620px]:whitespace-normal', natCls(mm?.name), on ? 'text-brand' : st === 'none' ? 'text-muted' : '')}>{mm?.name || slug}</b>
-                    <small title={mm?.author_name || ''} className={cx('max-w-full text-[11px] text-muted break-words @[620px]:whitespace-normal', natCls(mm?.author_name))}>{sub(mm, pick)}</small>
+                    <small title={mm?.author_name || ''} className="max-w-full text-[11px] text-muted break-words @[620px]:whitespace-normal">{sub(mm, pick)}</small>
                     {(st === 'none' || st === 'error') && <span className="text-[11px] text-muted">{st === 'none' ? 'No note' : 'Unavailable'}</span>}
                   </button>
                 </Fragment>
@@ -162,8 +160,8 @@ function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; m
             })}
             {more > 0 && <button className={cx(item, 'border-dashed border-line bg-surface hover:border-brand')} onClick={onMore}><b className="text-sm">{more} more →</b><small className="text-xs text-muted">on other sites</small></button>}
           </nav>
-          <section ref={readerRef} role="tabpanel" className="min-w-0 rounded-xl border border-line bg-surface @[620px]:flex-1">
-            <div className="rounded-t-xl border-b border-line bg-brand-soft px-3.5 py-2.5"><b className={cx('block text-brand break-words', natCls(m?.name))}>{m?.name}</b><small className={cx('block text-[12.5px] text-muted break-words', natCls(m?.author_name))}>{sub(m, picks.includes(cur))}</small></div>
+          {/* no heading: the highlighted item in the list already names the tafseer and its author */}
+          <section ref={readerRef} role="tabpanel" aria-label={m?.name} className="min-w-0 rounded-xl border border-line bg-surface @[620px]:flex-1">
             <div className="px-4 py-3.5"><TafsirText key={cur + s + ':' + a} slug={cur} meta={m} s={s} a={a} /></div>
           </section>
         </div>
@@ -205,28 +203,92 @@ export function VideoCards({videos, sname}: {videos: VideoCard[] | null; sname: 
   );
 }
 
+/** Sites whose text our server pulls from their ayah page (no API), shown here like our own tafseers; others open in a new tab. */
+const isEql = (url: string) => url.startsWith('https://equranlibrary.com/');
+const isQoh = (url: string) => url.startsWith('https://quranohadith.com/');
+const embeds = (url: string) => isEql(url) || isQoh(url);
+/* The open tafseer (and, on QuranoHadith, the open work) stay open while the reader steps between ayahs. */
+let moreOpen = '', qohOpen: string | null = null;
+
+/** QuranoHadith's page holds several tafseers for the ayah: one collapsible section each, like the Tafseer tab. */
+function QohTafsirs({s, a}: {s: number; a: number}) {
+  const [items, setItems] = useState<QohTafsir[] | null>(null);
+  const [err, setErr] = useState('');
+  const [open, setOpenState] = useState(qohOpen);
+  const setOpen = (n: string) => { qohOpen = n; setOpenState(n); };
+  useEffect(() => {
+    let live = true; setItems(null); setErr('');
+    getQoh(s, a).then(v => { if (live) setItems(v); }, e => { if (live) setErr(e.message); });
+    return () => { live = false; };
+  }, [s, a]);
+  if (err) return <div className={empty}>Could not load these tafseers. {err}</div>;
+  if (!items) return <div className="grid place-items-center py-8 text-muted"><div className="spin mb-2" />Loading tafseers…</div>;
+  if (!items.length) return <div className={empty}>No notes for ayah {s}:{a} here.</div>;
+  // the first work opens until the reader picks one (or when the picked one has no note for this ayah)
+  const cur = open !== null && (open === '' || items.some(x => x.name === open)) ? open : items[0].name;
+  return (
+    <div>
+      {items.map(x => {
+        const isOpen = x.name === cur;
+        return (
+          <section key={x.name} className={cx('acc mb-2 overflow-hidden rounded-xl border bg-surface', isOpen ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--line))]' : 'border-line')}>
+            <button className={cx('flex w-full items-center gap-2.5 border-0 px-3.5 py-3 text-left', isOpen ? 'bg-brand-soft' : 'bg-transparent hover:bg-surface2')} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? '' : x.name)}>
+              <span className="min-w-0 flex-1"><b className={cx('block text-[15px]', natCls(x.name))}>{x.name}</b><small className={cx('text-[12.5px] text-muted', natCls(x.author))}>{x.author}</small></span>
+              <Icon.chev className={cx('flex-none transition-transform', isOpen ? 'rotate-180 text-brand' : 'text-muted')} />
+            </button>
+            {isOpen && <div className="border-t border-line px-4 py-3.5"><div className="tafsir urdu rtl" dangerouslySetInnerHTML={{__html: tafsirHtml(x.text, 'urdu')}} /></div>}
+          </section>);
+      })}
+    </div>
+  );
+}
+
+/** A tafseer from another site at this ayah, with a bar back to the list and a credit to the site. */
+function EmbeddedTafseer({link, s, a, onBack}: {link: StudyLink; s: number; a: number; onBack: () => void}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        <button className={abtn} onClick={onBack}>← All tafseers</button>
+        <b className={cx('min-w-0 flex-1 truncate text-[14.5px]', natCls(link.name))} dir="auto">{link.name}</b>
+        <a className={cx(abtn, 'flex-none')} href={link.url} target="_blank" rel="noopener" title={`Open on ${link.site} in a new tab`}>Open in new tab ↗</a>
+      </div>
+      {isQoh(link.url) ? <QohTafsirs s={s} a={a} /> : <TafsirText slug={link.id} language={link.lang} s={s} a={a} />}
+      <p className="mt-1.5 text-[12px] text-muted">Source: <a href={link.url} target="_blank" rel="noopener">{link.site}</a></p>
+    </div>
+  );
+}
+
 /** Tafseers in the chosen language that live on other sites, each opened at this ayah, with a filter for long lists. */
 function MoreTafseers({links, lang, s, a}: {links: StudyLink[] | null; lang: TLang; s: number; a: number}) {
   const [q, setQ] = useState('');
+  const [open, setOpenState] = useState(moreOpen);
+  const setOpen = (id: string) => { moreOpen = id; setOpenState(id); };
   if (!links) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
   if (!links.length) return <div className={empty}>No {langText(lang)} tafseers on other sites yet.</div>;
+  const cur = links.find(l => l.id === open && embeds(l.url));
+  if (cur) return <EmbeddedTafseer link={cur} s={s} a={a} onBack={() => setOpen('')} />;
   const qq = q.trim().toLowerCase();
   // the id (source slug) keeps English spellings like "tafheem" finding works named in Urdu
   const shown = links.filter(l => !qq || `${l.name} ${l.author} ${l.site} ${l.id}`.toLowerCase().includes(qq));
   return (
     <div className="@container">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
-        <span>{links.length} {langText(lang)} tafseer{links.length === 1 ? '' : 's'} on other sites · each opens ayah {s}:{a} in a new tab</span><span className="flex-1" />
+        <span>{links.length} {langText(lang)} tafseer{links.length === 1 ? '' : 's'} on other sites · each opens at ayah {s}:{a}</span><span className="flex-1" />
         {links.length > 8 && <input className={cx(sel, 'w-full sm:w-56')} type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Filter by name or scholar…" aria-label="Filter tafseers" />}
       </div>
       {!shown.length && <div className={empty}>Nothing matches “{q}”.</div>}
       {/* two columns only when the panel itself is wide (full page), not in the narrow drawer */}
       <div className="grid gap-2 @[640px]:grid-cols-2">
-        {shown.map(l => (
-          <a key={l.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-ink no-underline hover:border-brand" href={l.url} target="_blank" rel="noopener">
+        {shown.map(l => {
+          const inner = <>
             <span className="min-w-0 flex-1"><b className={cx('block truncate text-[14.5px]', natCls(l.name))}>{l.name}</b><small className={cx('block truncate text-[12.5px] text-muted', natCls(l.author))}>{l.author}</small></span>
-            <span className="flex-none text-[12px] text-muted">{l.site} ↗</span>
-          </a>))}
+            <span className="flex-none text-[12px] text-muted">{l.site}{embeds(l.url) ? '' : ' ↗'}</span></>;
+          const cls = 'flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-left text-ink no-underline hover:border-brand';
+          // a real link too, so ctrl/middle-click still opens a new tab
+          return embeds(l.url)
+            ? <a key={l.id} className={cls} href={l.url} data-embed onClick={e => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); setOpen(l.id); }}>{inner}</a>
+            : <a key={l.id} className={cls} href={l.url} target="_blank" rel="noopener">{inner}</a>;
+        })}
       </div>
     </div>
   );
@@ -281,6 +343,9 @@ export default function TafseerPanel({s, a, tab, onTab}: {s: number; a: number; 
   const lang: TLang = settings.tafLang || firstLang;
   const links = study ? study.links.filter(l => l.lang === langText(lang)) : null;
   useEffect(() => { let live = true; setStudy(null); getStudy(s, a).then(d => { if (live) setStudy(d); }, () => { if (live) setStudy({links: [], videos: [], related: 0}); }); return () => { live = false; }; }, [s, a]);
+  // "More tafseers" is empty for some languages (Arabic): switching to one goes back to the Tafseer tab
+  const noMore = tafTab === 'more' && links !== null && !links.length;
+  useEffect(() => { if (noMore) pick('text'); }, [noMore]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
       <div className={cx(segWrap, 'mb-2.5 w-full sm:w-auto sm:max-w-xs')} role="group" aria-label="Tafseer language">

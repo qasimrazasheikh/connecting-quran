@@ -44,7 +44,7 @@ new external call, add a matching mock route there or the e2e run will break.
 ## Layout
 
 - `app/` — one folder per URL (`/surah/[n]/[[...ayah]]`, `/juz/[j]`, `/mushaf/[[...p]]`, `/tafseer/[s]`, `/videos/[s]`,
-  `/search`, `/quiz/[s]`, `/bookmarks`) plus browser-facing API routes in `app/api/` (`editions`, `tafsir/[slug]/[s]/[a]`,
+  `/search`, `/quiz/[s]`, `/bookmarks`) plus browser-facing API routes in `app/api/` (`editions`, `tafsir/[slug]/[s]/[a]` (an `eql-*` slug = the note pulled from that approved eQuranLibrary link's page), `qoh/[s]/[a]` (QuranoHadith's page split per work),
   `word/[s]/[a]`, `search`, `quiz/[s]`, `study/[s]/[a]` = links + videos + related count for the Study panel, `related/[s]/[a]` = related ayahs with shared words marked) that proxy the external sources through `lib/quran.ts`.
 - `components/` — almost all are client components. `AppProvider` owns settings, bookmarks, toasts and the open
   drawers/panels (settings, tafseer, word card); `PlayerProvider` owns the audio player. Both are mounted in `app/layout.tsx`.
@@ -88,6 +88,12 @@ new external call, add a matching mock route there or the e2e run will break.
   Arabic-Indic number into the ayah-end sign (`.endmark`).
 - **Quran Foundation API:** every `API.quranCom` call is signed with an OAuth token (`qfHeaders` in `quran.ts`) and cached
   by URL with `unstable_cache` (fetch's own cache would key on the hourly token).
+- **Sources and fallbacks:** Quran Foundation is the main source for the Arabic and for translations it carries (`QF_TRANS`
+  maps AlQuran Cloud ids to QF ids); tajweed and other translations come from AlQuran Cloud. `editions()` in `quran.ts`
+  fills whatever one source fails to give from the other, so an outage of either doesn't blank a page. Search is QF
+  first too (a translation search must pass `language=`, or QF only matches the Arabic); AlQuran Cloud answers when QF
+  fails or finds nothing. The surah list is built in (`lib/surahs.ts`).
+  When you add a QF call, the mock (`tests/mock-api.mjs`, `/qc`) must return the fields the app reads.
 - **Theming:** colour tokens are CSS variables in `app/globals.css` (3 palettes × light/dark, `data-theme` on `<html>`);
   Tailwind colours read those variables. Use the tokens rather than hard-coded colours.
 - Old hash links from the single-file site (`#/surah/2/255`) are redirected client-side in `AppProvider` — keep them working.
