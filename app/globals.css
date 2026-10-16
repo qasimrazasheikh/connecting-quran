@@ -178,7 +178,7 @@ button{cursor:pointer}
 
 /* Tafseer names in Arabic / Urdu script (natCls): own font and room for Nastaliq's tall letters and low dots. Outside
    @layer so the line height beats text-sm / leading-tight on the same element (those clip the dots in truncated lists). */
-.nat-ar{font-family:var(--font-ar);font-size:1.15em;line-height:1.6;unicode-bidi:isolate}
+.nat-ar{font-family:var(--font-ar);line-height:1.45;unicode-bidi:isolate}
 .nat-ur{font-family:var(--font-ur);line-height:2.3;unicode-bidi:isolate}
 
 /* Ayah-card highlights sit outside @layer so they beat the card's own utilities (border-line, shadow-card, bg-surface) */

@@ -1,12 +1,15 @@
 'use client';
 import {useRouter} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type ReactNode} from 'react';
 import AyahPicker from './AyahPicker';
 import {navStart} from './NavProgress';
 import {LAST_READ_EVENT, type LastRead} from './resume';
 
-/** Surah + ayah dropdowns for the surah reader. They follow the ayah being read; an ayah in this surah is scrolled to directly. */
-export default function ReaderPicker({s, focus}: {s: number; focus?: number}) {
+/**
+ * Surah + ayah dropdowns for the surah reader. They follow the ayah being read; an ayah in this surah is scrolled to directly.
+ * `children` (e.g. the translations button) sit at the right end of the same bar.
+ */
+export default function ReaderPicker({s, focus, children}: {s: number; focus?: number; children?: ReactNode}) {
   const router = useRouter();
   const [a, setA] = useState(focus || 1);
   useEffect(() => setA(focus || 1), [s, focus]);
@@ -20,5 +23,5 @@ export default function ReaderPicker({s, focus}: {s: number; focus?: number}) {
     setA(aa); history.replaceState(null, '', `/surah/${s}/${aa}`);
     el.scrollIntoView({block: 'start'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 2500);
   };
-  return <div className="mb-3 flex flex-wrap items-center gap-2"><AyahPicker s={s} a={a} onGo={go} idPrefix="r" /></div>;
+  return <div className="mb-3 flex flex-wrap items-center gap-2"><AyahPicker s={s} a={a} onGo={go} idPrefix="r" />{children && <div className="ml-auto flex items-center gap-2">{children}</div>}</div>;
 }

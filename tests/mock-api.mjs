@@ -52,11 +52,23 @@ http.createServer((req, res) => {
     const keys = versesKeys();
     return json(res, {verses: keys.map(k => ({verse_key: k, ['text_' + m[1]]: (k === '1:1' ? 'بِسۡمِ اللّٰہِ الرَّحۡمٰنِ الرَّحِیۡمِ' : 'وَ هُوَ ' + ayText('quran-uthmani', ...k.split(':').map(Number)).replace(BISM, '').split(' ').slice(1).join(' ')) + '​‏'}))});
   }
+  // verse fields the app reads, plus translations by Quran Foundation id, worded like the AlQuran Cloud mock's editions
+  const QF_IDS = {234: 'ur.jalandhry', 54: 'ur.junagarhi', 97: 'ur.maududi', 20: 'en.sahih', 19: 'en.pickthall', 22: 'en.yusufali', 203: 'en.hilali', 95: 'en.maududi', 57: 'en.transliteration'};
+  const verse = (k, pg = 2) => { const [s, a] = k.split(':').map(Number);
+    return {id: s * 1000 + a, verse_number: a, verse_key: k, juz_number: 1, page_number: pg, qpc_uthmani_hafs: qpc(k), words: words(k, q.get('language')),
+      translations: (q.get('translations') || '').split(',').filter(t => QF_IDS[t]).map(t => ({resource_id: +t, text: ayText(QF_IDS[t], s, a) + (t === '20' ? '<sup foot_note=1>1</sup>' : '')}))}; };
   if ((m = p.match(/^\/qc\/verses\/by_(chapter|juz|page)\/(\d+)$/))) {
     const n = +m[2], keys = m[1] === 'chapter' ? Array.from({length: COUNT(n)}, (_, k) => n + ':' + (k + 1)) : m[1] === 'page' ? pageKeys(n) : ['1:1', '1:2', '2:1', '2:2'];
-    return json(res, {pagination: {next_page: null}, verses: keys.map(k => ({verse_key: k, qpc_uthmani_hafs: qpc(k), words: words(k, q.get('language'))}))});
+    return json(res, {pagination: {next_page: null}, verses: keys.map(k => verse(k, m[1] === 'page' ? n : 2))});
   }
-  if ((m = p.match(/^\/qc\/verses\/by_key\/(\d+:\d+)$/))) return json(res, {verse: {verse_key: m[1], qpc_uthmani_hafs: qpc(m[1]), words: words(m[1], q.get('language'))}});
+  if ((m = p.match(/^\/qc\/verses\/by_key\/(\d+:\d+)$/))) return json(res, {verse: verse(m[1])});
+  // QF search: 120 hits, 50 a page; "nothing" and "cloudonly" find none here ("cloudonly" is then found by AlQuran Cloud)
+  if (p === '/qc/search'){
+    const t = q.get('q') || '', tr = q.get('translations'), page = +(q.get('page') || 1), total = /^(nothing|cloudonly)$/.test(t) ? 0 : 120;
+    const keys = Array.from({length: Math.max(0, Math.min(50, total - (page - 1) * 50))}, (_, k) => `2:${(page - 1) * 50 + k + 1}`);
+    return json(res, {search: {total_results: total, results: keys.map(k => ({verse_key: k, text: `qf text with ${t} inside ${k}`,
+      translations: tr ? [{resource_id: +tr, text: `qf translation with <em>${t}</em> inside ${k}<sup foot_note=1>1</sup>`}] : []}))}});
+  }
   // ---- tafsir_api
   if (p === '/tafsir/editions.json') return json(res, [
     {slug: 'en-tafisr-ibn-kathir', name: 'Ibn Kathir', language_name: 'english', author_name: 'IK'},
@@ -76,5 +88,10 @@ http.createServer((req, res) => {
   if (p === '/morph.txt') { res.writeHead(200, {'content-type': 'text/plain'});
     return res.end('2:1:1:1\tكتاب\tN\tROOT:كتب|LEM:كِتَاب|M|NOM\n2:1:2:1\tوَ\tP\tCONJ|PREF|LEM:و\n2:1:2:2\tرحمة\tV\tPERF|(IV)|ROOT:رحم|LEM:رَحِمَ|3MP\n2:1:2:3\tهُم\tN\tSUFF|PRON:3MP\n2:1:3:1\tصبر\tN\tROOT:صبر|LEM:صَبْر|M|GEN\n1:2:1:1\tٱلْ\tP\tDET|PREF|LEM:ال\n1:2:1:2\tحَمْدُ\tN\tROOT:حمد|LEM:حَمْد|M|NOM\n1:2:2:1\tلِ\tP\tP|PREF|LEM:ل\n1:2:2:2\tلَّهِ\tN\tPN|ROOT:أله|LEM:{ll~ah|GEN\n1:2:3:1\tرَبِّ\tN\tROOT:ربب|LEM:رَبّ|M|GEN\n'); }
   if ((m = p.match(/^\/qe\/translation\/aya\/urdu_junagarhi\/(\d+)\/(\d+)$/))) return json(res, {result: {translation: `placeholder translation ${m[1]}:${m[2]}`, footnotes: m[2] === '2' ? '' : 'placeholder note line 1\nplaceholder note line 2'}});
+  // ---- QuranoHadith ayah page (/qoh): two works with notes, one empty, and Ibn Abbas (which the app hides)
+  if ((m = p.match(/^\/qoh\/alquran-tafseer\/(\d+)\/(\d+)$/))) { res.writeHead(200, {'content-type': 'text/html'});
+    const box = (t, by, body) => `<div class="alert alert-light">\n<h5 class="m-0">${t}</h5>\n<h6 class="m-0 small">by ${by}</h6>\n<hr>\n<p class="font-urdu h5">\n${body}</p>\n</div>`;
+    return res.end(box('Ahsan ul Bayan', 'x', `placeholder qoh note 1 for ${m[1]}:${m[2]}\nsecond line`) + box('Maariful Quran', 'x', `placeholder qoh note 2 for ${m[1]}:${m[2]}`)
+      + box('Ahkam ul Quran', 'x', '  ') + box('Tafseer Ibn e Abbas', 'Ibn e Abbas', 'hidden')); }
   res.writeHead(404); res.end('no mock for ' + p);
 }).listen(PORT, () => console.log('mock api on :' + PORT));

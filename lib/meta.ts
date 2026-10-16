@@ -5,22 +5,36 @@ export const SURAH_PAGE = [1,2,50,77,106,128,151,177,187,208,221,235,249,255,262
 export const JUZ_PAGE = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
 export const JUZ_START: [number, number][] = [[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,82],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
 
-export const RECITERS = [
+const QC = 'https://verses.quran.com', EA = 'https://mirrors.quranicaudio.com/everyayah';
+/** `ar.*` reciters play from islamic.network (by ayah number); the rest are quran.com's recitations (folders as its
+ *  /recitations/{id}/by_ayah API returns them), built here so playback starts without an API call per ayah. */
+export const RECITERS: {id: string; name: string; br?: number; dir?: string}[] = [
   {id:'ar.alafasy', name:'Mishary Rashid Alafasy', br:128},
   {id:'ar.abdulbasitmurattal', name:'Abdul Basit (Murattal)', br:192},
+  {id:'qc.abdulbasitmujawwad', name:'Abdul Basit (Mujawwad)', dir:`${QC}/AbdulBaset/Mujawwad/mp3`},
   {id:'ar.abdurrahmaansudais', name:'Abdur-Rahman As-Sudais', br:192},
-  {id:'ar.saoodshuraym', name:'Saood Ash-Shuraym', br:64},
+  {id:'qc.shatri', name:'Abu Bakr Al-Shatri', dir:`${QC}/Shatri/mp3`},
+  {id:'ar.hudhaify', name:'Ali Al-Hudhaify', br:128},
+  {id:'qc.rifai', name:'Hani Ar-Rifai', dir:`${QC}/Rifai/mp3`},
   {id:'ar.mahermuaiqly', name:'Maher Al-Muaiqly', br:128},
   {id:'ar.husary', name:'Mahmoud Khalil Al-Husary', br:128},
   {id:'ar.husarymujawwad', name:'Al-Husary (Mujawwad)', br:128},
+  {id:'qc.husarymuallim', name:'Al-Husary (Muallim)', dir:`${EA}/Husary_Muallim_128kbps`},
+  {id:'qc.tablawi', name:'Mohamed Al-Tablawi', dir:`${EA}/Mohammad_al_Tablaway_128kbps`},
   {id:'ar.minshawi', name:'Muhammad Siddiq Al-Minshawi', br:128},
-  {id:'ar.hudhaify', name:'Ali Al-Hudhaify', br:128},
+  {id:'qc.minshawimujawwad', name:'Al-Minshawi (Mujawwad)', dir:`${QC}/Minshawi/Mujawwad/mp3`},
   {id:'ar.muhammadayyoub', name:'Muhammad Ayyoub', br:128},
+  {id:'ar.saoodshuraym', name:'Saood Ash-Shuraym', br:64},
+  {id:'qc.dussary', name:'Yasser Ad-Dussary', dir:`${EA}/Yasser_Ad-Dussary_128kbps`},
 ];
 export const AUDIO_CDN = process.env.NEXT_PUBLIC_AUDIO_CDN ?? 'https://cdn.islamic.network/quran/audio';
 export const WORD_AUDIO_CDN = process.env.NEXT_PUBLIC_WORD_AUDIO_CDN ?? 'https://audio.qurancdn.com';
-export const audioUrl = (reciterId: string, n: number) => { const r = RECITERS.find(x => x.id === reciterId) ?? RECITERS[0]; return `${AUDIO_CDN}/${r.br}/${r.id}/${n}.mp3`; };
 const p3 = (n: number) => String(n).padStart(3, '0');
+/** n = ayah number counted through the whole Quran (islamic.network names files by it). */
+export const audioUrl = (reciterId: string, s: number, a: number, n: number) => {
+  const r = RECITERS.find(x => x.id === reciterId) ?? RECITERS[0];
+  return r.dir ? `${r.dir}/${p3(s)}${p3(a)}.mp3` : `${AUDIO_CDN}/${r.br}/${r.id}/${n}.mp3`;
+};
 /** quran.com's own audio_url is shifted in many ayahs, so build the file name from surah/ayah/word number. */
 export const wordAudioUrl = (s: number, a: number, w: number) => `${WORD_AUDIO_CDN}/wbw/${p3(s)}_${p3(a)}_${p3(w)}.mp3`;
 

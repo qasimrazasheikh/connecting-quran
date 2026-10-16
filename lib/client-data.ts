@@ -19,7 +19,9 @@ async function getJSON<T>(url: string): Promise<T> {
 }
 export const getEditions = () => getJSON<{trans: TransEdition[]; tafsir: TafsirEdition[]}>('/api/editions');
 export const getTafsir = (slug: string, s: number, a: number) => getJSON<{text: string}>(`/api/tafsir/${encodeURIComponent(slug)}/${s}/${a}`).then(d => d.text || '');
-export type Study = {links: StudyLink[]; videos: VideoCard[]; related: number};
+export type QohTafsir = {name: string; author: string; text: string};
+export const getQoh = (s: number, a: number) => getJSON<{items: QohTafsir[]}>(`/api/qoh/${s}/${a}`).then(d => d.items);
+export type Study ={links: StudyLink[]; videos: VideoCard[]; related: number};
 export const getRelated = (s: number, a: number, ip: boolean) => getJSON<{items: RelatedItem[]}>(`/api/related/${s}/${a}${ip ? '?script=ip' : ''}`).then(d => d.items);
 export const getStudy = (s: number, a: number) => getJSON<Study>(`/api/study/${s}/${a}`);
 export type WordInfo = {w: number; translit: string; meanEn: string; meanUr: string; type: string; root: string; lemma: string; segs: SegInfo[]};

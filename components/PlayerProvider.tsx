@@ -31,7 +31,7 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
     const it = queue.current.find(q => q.key === key); const el = audio.current; if (!it || !el) return;
     if (key !== curRef.current) setRep({...repRef.current, count: 1});
     curRef.current = key; setCur(key);
-    el.src = audioUrl(sRef.current.reciter, it.n);
+    el.src = audioUrl(sRef.current.reciter, it.s, it.a, it.n);
     el.defaultPlaybackRate = el.playbackRate = sRef.current.speed || 1;
     el.play().catch(e => { if ((e as Error).name !== 'AbortError') toast('Could not play audio'); });
     if (sRef.current.autoScroll) document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'});

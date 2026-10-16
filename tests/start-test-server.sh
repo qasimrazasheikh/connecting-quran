@@ -7,6 +7,6 @@ cd "$(dirname "$0")/.."
 rm -rf .next/cache/fetch-cache
 node tests/mock-api.mjs > /tmp/mock.log 2>&1 &
 M=http://localhost:4010
-DATABASE_URL= ADMIN_PASSWORD= ADMIN_SECRET= CLIENT_ID= CLIENT_SECRET= QURAN_CLOUD_API=$M/cloud QURAN_COM_API=$M/qc TAFSIR_API=$M/tafsir IP_BACKUP_API=$M/ipb MORPH_URL=$M/morph.txt QURANENC_API=$M/qe \
+DATABASE_URL= ADMIN_PASSWORD= ADMIN_SECRET= CLIENT_ID= CLIENT_SECRET= QURAN_CLOUD_API=$M/cloud QURAN_COM_API=$M/qc TAFSIR_API=$M/tafsir IP_BACKUP_API=$M/ipb MORPH_URL=$M/morph.txt QURANENC_API=$M/qe QOH_URL=$M/qoh \
   PORT=3100 npx next start > /tmp/next.log 2>&1 &
 sleep 4

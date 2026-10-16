@@ -4,6 +4,7 @@ import {API, REVALIDATE} from './config';
 import {catalogTafsirs} from './catalog';
 import {nativeName} from './tafsir-names';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
+import {SURAHS} from './surahs';
 import {cleanIP, fixTanzil, type QWord} from './text';
 
 class HttpError extends Error { constructor(public status: number, url: string){ super(`HTTP ${status} for ${url}`); } }
@@ -52,14 +53,15 @@ async function tafsirJSON<T>(path: string): Promise<T> {
   catch(e){ if (!API.tafsirBackup || (e instanceof HttpError && e.status === 404)) throw e; return getJSON<T>(API.tafsirBackup + path); }
 }
 
+/** AlQuran Cloud call: give up after 10 s so a page can still be built from Quran Foundation. */
+const cloudJSON = <T>(path: string, revalidate = REVALIDATE) => getJSON<T>(API.quranCloud + path, revalidate, 10000);
+
 export type SurahInfo = {n: number; ar: string; en: string; mean: string; ayahs: number; type: string};
-export async function getSurahList(): Promise<SurahInfo[]> {
-  const d = await getJSON<{data: {number: number; name: string; englishName: string; englishNameTranslation: string; numberOfAyahs: number; revelationType: string}[]}>(`${API.quranCloud}/surah`);
-  return d.data.map(s => ({n: s.number, ar: s.name, en: s.englishName, mean: s.englishNameTranslation, ayahs: s.numberOfAyahs, type: s.revelationType}));
-}
+/** Built in (it never changes), so menus and titles need no API. Async so callers stay as they were. */
+export async function getSurahList(): Promise<SurahInfo[]> { return SURAHS; }
 export async function getTransEditions(): Promise<TransEdition[]> {
   try{
-    const d = await getJSON<{data: TransEdition[]}>(`${API.quranCloud}/edition?format=text&type=translation`);
+    const d = await cloudJSON<{data: TransEdition[]}>('/edition?format=text&type=translation');
     const list = d.data.filter(e => e.language === 'ur' || e.language === 'en');
     return list.length ? list : FALLBACK_TRANS;
   }catch{ return FALLBACK_TRANS; }
@@ -73,18 +75,68 @@ export type CloudAyah = {number: number; text: string; numberInSurah: number; ju
 type Edition = {edition: {identifier: string; language: string}; ayahs: CloudAyah[]};
 /** The Uthmani edition is only a fallback for quran.com's text (getUthmani); clean it so it still reads right. */
 const cleanEd = (e: Edition): Edition => e.edition?.identifier === 'quran-uthmani' ? {...e, ayahs: e.ayahs.map(x => ({...x, text: fixTanzil(x.text)}))} : e;
-export async function getSurahEditions(n: number, ids: string[]): Promise<Edition[]> {
-  return (await getJSON<{data: Edition[]}>(`${API.quranCloud}/surah/${n}/editions/${ids.join(',')}`)).data.map(cleanEd);
-}
-export async function getJuzEdition(j: number, id: string): Promise<Edition> {
-  return cleanEd((await getJSON<{data: Edition}>(`${API.quranCloud}/juz/${j}/${id}`)).data);
-}
-export async function getPageEdition(p: number, id: string): Promise<Edition> {
-  return cleanEd((await getJSON<{data: Edition}>(`${API.quranCloud}/page/${p}/${id}`)).data);
-}
+export const getSurahEditions = (n: number, ids: string[]) => editions('chapter', n, ids);
+export const getJuzEdition = async (j: number, id: string) => (await editions('juz', j, [id]))[0];
+export const getPageEdition = async (p: number, id: string) => (await editions('page', p, [id]))[0];
 export async function getAyahEditions(s: number, a: number, ids: string[]): Promise<(CloudAyah & {edition: {identifier: string}})[]> {
-  const d = (await getJSON<{data: (CloudAyah & {edition: {identifier: string}})[]}>(`${API.quranCloud}/ayah/${s}:${a}/editions/${ids.join(',')}`)).data;
-  return d.map(x => x.edition?.identifier === 'quran-uthmani' ? {...x, text: fixTanzil(x.text)} : x);
+  return (await editions('verse', `${s}:${a}`, ids)).map(e => ({...e.ayahs[0], edition: e.edition}));
+}
+
+/**
+ * Arabic and translations for a surah/juz/page/ayah, in AlQuran Cloud's shape. Quran Foundation is the main source;
+ * tajweed and translations it doesn't carry come from AlQuran Cloud. Whatever one source fails to give, the other fills
+ * (from Quran Foundation, tajweed is plain Uthmani and a missing translation reads QF_MISSING). Throws only if both fail.
+ */
+async function editions(kind: IPKind, id: string | number, ids: string[]): Promise<Edition[]> {
+  const viaQf = ids.filter(e => e === 'quran-uthmani' || QF_TRANS[e]), viaCloud = ids.filter(e => !viaQf.includes(e));
+  const warn = (src: string) => (e: Error) => { console.warn(`${src} failed for ${kind} ${id} (${e.message}); using the other source`); return null; };
+  const [qf, cloud] = await Promise.all([
+    viaQf.length ? qfEditions(kind, id, viaQf).catch(warn('Quran Foundation')) : [],
+    viaCloud.length ? cloudEditions(kind, id, viaCloud).catch(warn('AlQuran Cloud')) : [],
+  ]);
+  const got = new Map([...qf ?? [], ...cloud ?? []].map(e => [e.edition.identifier, e]));
+  const missing = ids.filter(e => !got.has(e));
+  if (missing.length) (qf === null ? await cloudEditions(kind, id, missing) : await qfEditions(kind, id, missing)).forEach(e => got.set(e.edition.identifier, e));
+  return ids.map(e => got.get(e)!);
+}
+async function cloudEditions(kind: IPKind, id: string | number, ids: string[]): Promise<Edition[]> {
+  if (kind === 'chapter') return (await cloudJSON<{data: Edition[]}>(`/surah/${id}/editions/${ids.join(',')}`)).data.map(cleanEd);
+  if (kind === 'verse') return (await cloudJSON<{data: (CloudAyah & {edition: {identifier: string; language: string}})[]}>(`/ayah/${id}/editions/${ids.join(',')}`)).data
+    .map(({edition, ...ay}) => cleanEd({edition, ayahs: [ay]}));
+  return Promise.all(ids.map(async e => cleanEd((await cloudJSON<{data: Edition}>(`/${kind}/${id}/${e}`)).data)));
+}
+
+/** AlQuran Cloud translation ids → Quran Foundation's. These load from Quran Foundation; others from AlQuran Cloud. */
+const QF_TRANS: Record<string, number> = {
+  'ur.jalandhry': 234, 'ur.junagarhi': 54, 'ur.maududi': 97,
+  'en.sahih': 20, 'en.pickthall': 19, 'en.yusufali': 22, 'en.hilali': 203, 'en.maududi': 95, 'en.transliteration': 57,
+};
+export const QF_MISSING = 'This translation is temporarily unavailable.';
+type QFVerse = {id: number; verse_number: number; verse_key: string; page_number: number; juz_number: number; qpc_uthmani_hafs?: string; translations?: {resource_id: number; text: string}[]};
+/** Quran Foundation translation text without its footnote markers and tags. */
+const qfPlain = (t: string) => t.replace(/<sup[^>]*>[\s\S]*?<\/sup>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+/**
+ * Editions in AlQuran Cloud's shape, built from Quran Foundation. Its ayah `id` is the ayah's number across the whole
+ * Quran and its pages follow the same 604-page Madani layout. Tajweed comes back as plain Uthmani (no colours).
+ */
+async function qfEditions(kind: IPKind, id: string | number, ids: string[]): Promise<Edition[]> {
+  const tr = [...new Set(ids.map(x => QF_TRANS[x]).filter(Boolean))];
+  const q = `fields=qpc_uthmani_hafs${tr.length ? '&translations=' + tr.join(',') : ''}`;
+  const vs: QFVerse[] = [];
+  if (kind === 'verse') vs.push((await getJSON<{verse: QFVerse}>(`${API.quranCom}/verses/by_key/${id}?${q}`)).verse);
+  else for (let page = 1; page; ){
+    const d = await getJSON<{verses: QFVerse[]; pagination?: {next_page: number | null}}>(`${API.quranCom}/verses/by_${kind}/${id}?${q}&per_page=1000&page=${page}`);
+    vs.push(...(d.verses || [])); page = d.pagination?.next_page || 0;
+  }
+  if (!vs.length) throw new Error('Quran Foundation returned no ayahs');
+  return ids.map(e => ({
+    edition: {identifier: e, language: e.startsWith('quran') ? 'ar' : e.split('.')[0]},
+    ayahs: vs.map(v => {
+      const s = +v.verse_key.split(':')[0], t = v.translations?.find(x => x.resource_id === QF_TRANS[e])?.text;
+      return {number: v.id, numberInSurah: v.verse_number, juz: v.juz_number, page: v.page_number, surah: {number: s, name: SURAHS[s - 1].ar, englishName: SURAHS[s - 1].en},
+        text: e.startsWith('quran') ? (v.qpc_uthmani_hafs || '').replace(/\s*[٠-٩]+$/, '').trim() : t != null ? qfPlain(t) : QF_MISSING};
+    }),
+  }));
 }
 
 /**
@@ -189,11 +241,86 @@ export async function getTafsirText(slug: string, s: number, a: number): Promise
   catch(e){ if (e instanceof HttpError && e.status === 404) return ''; throw e; }
 }
 
+/**
+ * The tafseer part of an eQuranLibrary ayah page (the curator-approved link URL), as simple HTML paragraphs.
+ * Their page has no API; the note is the one `div.translation` block holding a `span.preformatted`.
+ */
+export async function getEqlTafsir(url: string): Promise<string> {
+  const r = await fetch(url, {next: {revalidate: REVALIDATE}, signal: AbortSignal.timeout(15000)});
+  if (!r.ok) throw new HttpError(r.status, url);
+  const m = (await r.text()).match(/<div class="translation ">\s*<span class="preformatted"[^>]*>([\s\S]*?)<\/span>\s*<\/div>/);
+  if (!m) return '';
+  return paras(m[1]
+    .replace(/<small><font[^>]*>(\d+)<\/font><\/small>/g, '<sup>$1</sup>')   // footnote numbers
+    .replace(/<(\/?)bold>/g, '<$1b>'));                                         // headings like خلاصہ تفسیر
+}
+
+/** Plain text with line breaks (and maybe <br>) as <p> paragraphs. */
+const paras = (t: string) => t.split(/\s*(?:\n|<br\s*\/?>)\s*/).filter(p => p.replace(/<[^>]+>/g, '').trim()).map(p => `<p>${p}</p>`).join('');
+
+/** QuranoHadith's titles in Urdu script: [name, author]. Titles not listed keep the site's English. */
+const QOH_NATIVE: Record<string, [string, string]> = {
+  'Tafseer Ibn-e-Kaseer': ['تفسیر ابن کثیر', 'حافظ ابن کثیر'],
+  'Ahsan ul Bayan': ['احسن البیان', 'حافظ صلاح الدین یوسف'],
+  'Taiseer ul Quran': ['تیسیر القرآن', 'مولانا عبدالرحمٰن کیلانی'],
+  'Tafseer al Quran': ['تفسیر القرآن الکریم', 'حافظ عبدالسلام بھٹوی'],
+  'Maariful Quran': ['معارف القرآن', 'مفتی محمد شفیع'],
+  'Mufradat ul Quran': ['مفردات القرآن', 'امام راغب اصفہانی'],
+  'Ahkam ul Quran': ['احکام القرآن', 'امام ابوبکر جصاص'],
+  'Bayan ul Quran': ['بیان القرآن', 'ڈاکٹر اسرار احمد'],
+  'Tafheem ul Quran': ['تفہیم القرآن', 'سید ابوالاعلیٰ مودودی'],
+  'Aasan Tarjuma e Quran': ['آسان ترجمۂ قرآن', 'مفتی محمد تقی عثمانی'],
+};
+export type QohTafsir = {name: string; author: string; text: string};
+/**
+ * The tafseers on a QuranoHadith ayah page (the approved link URL) that have a note for this ayah. No API: each work
+ * is a `div.alert` with an h5 title, h6 author and a <p> of plain text. Ibn Abbas is left out (weak chain, as elsewhere).
+ */
+export async function getQohTafsirs(url: string): Promise<QohTafsir[]> {
+  const src = url.replace(/^https:\/\/quranohadith\.com/, API.qoh);
+  // the site's firewall turns away requests without a browser-like user agent
+  const r = await fetch(src, {next: {revalidate: REVALIDATE}, signal: AbortSignal.timeout(20000),
+    headers: {'User-Agent': 'Mozilla/5.0 (compatible; ConnectingQuran/1.0)'}});
+  if (!r.ok) throw new HttpError(r.status, src);
+  const re = /<div class="alert alert-light[^"]*"[^>]*>\s*<h5 class="m-0">([^<]*)<\/h5>\s*<h6 class="m-0 small">([^<]*)<\/h6>\s*<hr>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/div>/g;
+  return [...(await r.text()).matchAll(re)]
+    .map(([, t, by, body]) => { const title = t.trim(), [name, author] = QOH_NATIVE[title] ?? [title, by.trim().replace(/^by\s+/i, '')]; return {name, author, text: paras(body.trim())}; })
+    .filter(x => x.text && !/ibn[- ]e[- ]abbas/i.test(x.name));
+}
+
 export type SearchMatch = {s: number; a: number; sname: string; text: string};
+/**
+ * Quran Foundation first; AlQuran Cloud when QF fails, finds nothing, or lacks the translation (AlQuran Cloud matches
+ * exact words, so it can still find what QF's looser search misses).
+ */
 export async function searchQuran(term: string, edition: string): Promise<{count: number; matches: SearchMatch[]}> {
+  let qf: {count: number; matches: SearchMatch[]} | null = null;
+  try{ qf = await qfSearch(term, edition); if (qf.matches.length) return qf; }
+  catch(e){ console.warn(`Quran Foundation search failed (${(e as Error).message}); using AlQuran Cloud`); }
   try{
-    const d = await getJSON<{code: number; data: {count: number; matches: {text: string; numberInSurah: number; surah: {number: number; englishName: string}}[]}}>(
-      `${API.quranCloud}/search/${encodeURIComponent(term)}/all/${encodeURIComponent(edition)}`, 3600);
-    return {count: d.data.count, matches: d.data.matches.map(m => ({s: m.surah.number, a: m.numberInSurah, sname: m.surah.englishName, text: m.text}))};
-  }catch(e){ if (e instanceof HttpError && e.status === 404) return {count: 0, matches: []}; throw e; }
+    const d = await cloudJSON<{code: number; data: {count: number; matches: {text: string; numberInSurah: number; surah: {number: number; englishName: string}}[]}}>(
+      `/search/${encodeURIComponent(term)}/all/${encodeURIComponent(edition)}`, 3600);
+    return {count: d.data.count, matches: d.data.matches.map(m => ({s: m.surah.number, a: m.numberInSurah, sname: SURAHS[m.surah.number - 1]?.en || m.surah.englishName, text: m.text}))};
+  }catch(e){
+    // AlQuran Cloud answers 404 for "no matches"; if it's down, QF's empty answer stands
+    if ((e instanceof HttpError && e.status === 404) || qf) return {count: 0, matches: []};
+    throw e;
+  }
+}
+/** Search on Quran Foundation (looser matching than AlQuran Cloud's exact words): first 100 results. */
+async function qfSearch(term: string, edition: string): Promise<{count: number; matches: SearchMatch[]}> {
+  const ar = edition.startsWith('quran'), tr = QF_TRANS[edition];
+  if (!ar && !tr) throw new Error(`no Quran Foundation copy of ${edition}`);
+  type R = {verse_key: string; text: string; translations?: {resource_id: number; text: string}[]};
+  // a translation search needs its language, or QF only matches the Arabic
+  const get = (page: number) => getJSON<{search: {total_results: number; results: R[]}}>(
+    `${API.quranCom}/search?q=${encodeURIComponent(term)}&size=50&page=${page}${ar ? '' : `&language=${edition.split('.')[0]}&translations=${tr}`}`, 3600);
+  const first = await get(1), results = [...first.search.results];
+  if (first.search.total_results > 50) results.push(...(await get(2).catch(() => null))?.search.results ?? []);
+  // a translation search keeps only results that came with that translation (QF also matches on the Arabic)
+  const matches = results.map(r => {
+    const [s, a] = r.verse_key.split(':').map(Number), t = r.translations?.find(x => x.resource_id === tr)?.text;
+    return {s, a, sname: SURAHS[s - 1]?.en || `Surah ${s}`, text: ar ? r.text : t ? qfPlain(t) : ''};
+  }).filter(m => m.text);
+  return {count: matches.length < results.length ? matches.length : first.search.total_results, matches};
 }
