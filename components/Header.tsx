@@ -51,7 +51,7 @@ export default function Header() {
       <div className="relative mx-auto flex max-w-[1100px] items-center gap-2 px-3 py-2.5 md:gap-3 md:px-4">
         <button className={cx(iconBtn, 'md:hidden')} aria-label="Menu" onClick={() => setOpen(o => !o)}><Icon.menu /></button>
         <Link href="/" className="flex min-w-0 items-center gap-2 whitespace-nowrap text-base font-bold tracking-tight text-ink no-underline md:gap-2.5 md:text-lg">
-          <Logo className="size-[30px] shrink-0 rounded-[10px] md:size-[34px]" svgClass="size-[20px] md:size-[22px]" />
+          <Logo className="size-[42px] shrink-0 rounded-[10px] md:size-[46px]" svgClass="size-[20px] md:size-[22px]" />
           <span className="max-[419px]:hidden">Connecting Quran<small className="hidden text-[11px] font-medium tracking-wider text-muted min-[1521px]:block">QURAN · TRANSLATION · TAFSEER</small></span>
         </Link>
         <nav className={cx('md:ml-1 md:flex md:gap-0.5 min-[1521px]:ml-3 min-[1521px]:gap-1',
