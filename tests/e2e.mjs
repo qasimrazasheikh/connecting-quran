@@ -12,7 +12,8 @@ const p = await ctx.newPage();
 const errs = []; p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errs.push(m.text()); });
 const wav = fs.readFileSync(new URL('./silence.wav', import.meta.url));
 await ctx.route(/cdn\.jsdelivr\.net/, r => r.fulfill({body: "", contentType: "text/css"}));
-await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com|verses\.quran\.com|mirrors\.quranicaudio\.com/, r => r.fulfill({contentType: 'audio/wav', body: wav}));
+const audioHits = [];
+await ctx.route(/cdn\.islamic\.network|audio\.qurancdn\.com|verses\.quran\.com|mirrors\.quranicaudio\.com/, r => { audioHits.push(r.request().url()); return r.fulfill({contentType: 'audio/wav', body: wav}); });
 let fails = 0;
 const ok = (cond, msg, extra = '') => { console.log((cond ? '  ok  ' : '  FAIL') + ' ' + msg + (extra !== '' ? ' → ' + extra : '')); if (!cond) fails++; };
 const go = async u => { await p.goto(BASE + u); await p.waitForLoadState('networkidle', {timeout: 8000}).catch(() => {}); await p.waitForTimeout(300); };
@@ -79,6 +80,8 @@ await p.mouse.click(5, 300); ok(await p.locator('#wcard').count() === 0, 'click 
 console.log('# player');
 await p.click('#a-2-1 [data-act=play]'); await p.waitForSelector('#player');
 ok((await p.locator('#plTitle').innerText()).includes('2:1'), 'player shows ayah');
+await p.waitForTimeout(500); // files are named by ayah number, so 2:2 and 2:3 are the two after 2:1's
+{ const n = +audioHits.find(u => u.includes('/ar.'))?.match(/(\d+)\.mp3$/)[1]; ok([n + 1, n + 2].every(f => audioHits.some(u => u.endsWith(`/${f}.mp3`))), 'next ayahs load early', audioHits.join(' ')); }
 await p.click('#plRep'); await p.click('[data-rm=ayah]'); await p.click('[data-rt="2"]');
 ok((await p.locator('#plRec').innerText()).includes('repeat'), 'repeat mode', await p.locator('#plRec').innerText());
 await p.click('[data-sp="1.5"]'); ok((await p.locator('#plSpeed').innerText()).includes('1.5'), 'speed');
