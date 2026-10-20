@@ -11,11 +11,13 @@ type PCtx = {cur: string | null; playing: boolean; setQueue: (q: QItem[], opts?:
 const PlayerCtx = createContext<PCtx | null>(null);
 export const usePlayer = () => { const c = useContext(PlayerCtx); if (!c) throw new Error('usePlayer outside provider'); return c; };
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const PRELOAD = 2; // how many ayahs ahead to load
 
 export default function PlayerProvider({children}: {children: ReactNode}) {
   const {settings, update, toast} = useApp();
   const pathname = usePathname();
   const audio = useRef<HTMLAudioElement | null>(null);
+  const ahead = useRef<HTMLAudioElement[]>([]); // silent players that load the next ayahs early, so moving on has no wait
   const queue = useRef<QItem[]>([]); const onEnd = useRef<(() => void) | undefined>(undefined);
   const pendingFirst = useRef(false);
   const [cur, setCur] = useState<string | null>(null); const curRef = useRef<string | null>(null);
@@ -26,6 +28,15 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
   const [sleepLeft, setSleepLeft] = useState<string>(''); const sleepEnd = useRef(0); const sleepAfterAyah = useRef(false); const sleepTimer = useRef<ReturnType<typeof setInterval>>(undefined);
   const sRef = useRef(settings); sRef.current = settings;
 
+  // load the next PRELOAD ayahs while this one plays; the browser keeps the files, so the next play starts at once
+  const preloadAfter = (key: string) => {
+    const i = queue.current.findIndex(q => q.key === key);
+    const urls = queue.current.slice(i + 1, i + 1 + PRELOAD).map(nx => audioUrl(sRef.current.reciter, nx.s, nx.a, nx.n));
+    while (ahead.current.length < PRELOAD) ahead.current.push(Object.assign(new Audio(), {preload: 'auto', muted: true}));
+    // keep a player that is already loading a wanted file; give the others the files still missing
+    const free = ahead.current.filter(a => !urls.includes(a.getAttribute('src') || ''));
+    urls.filter(u => !ahead.current.some(a => a.getAttribute('src') === u)).forEach(u => { const a = free.shift(); if (a){ a.src = u; a.load(); } });
+  };
   const item = (key: string | null) => queue.current.find(q => q.key === key);
   const play = useCallback((key: string) => {
     const it = queue.current.find(q => q.key === key); const el = audio.current; if (!it || !el) return;
@@ -34,10 +45,12 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
     el.src = audioUrl(sRef.current.reciter, it.s, it.a, it.n);
     el.defaultPlaybackRate = el.playbackRate = sRef.current.speed || 1;
     el.play().catch(e => { if ((e as Error).name !== 'AbortError') toast('Could not play audio'); });
+    preloadAfter(key);
     if (sRef.current.autoScroll) document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'});
   }, [toast]);
   const stop = useCallback(() => {
     const el = audio.current; if (el){ el.pause(); el.removeAttribute('src'); el.load(); }
+    ahead.current.forEach(a => { a.removeAttribute('src'); a.load(); });
     curRef.current = null; setCur(null); setPlaying(false); setPanel(false);
   }, []);
   const step = (dir: number) => { const i = queue.current.findIndex(q => q.key === curRef.current); return queue.current[i + dir]?.key; };
