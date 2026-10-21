@@ -237,9 +237,22 @@ export async function getTafsirText(slug: string, s: number, a: number): Promise
     return `ترجمہ: ${tr}` + (notes ? `\n\nتفسیری حواشی:\n${notes}` : '\n\n(اس آیت پر کوئی حاشیہ نہیں)');
   }
   if (!/^[a-z0-9-]+$/i.test(slug)) throw new Error('bad slug');
-  try{ return (await tafsirJSON<{text?: string}>(`/${slug}/${s}/${a}.json`)).text || ''; }
+  try{ const t = (await tafsirJSON<{text?: string}>(`/${slug}/${s}/${a}.json`)).text || ''; return slug === SAADI_UR ? fixSaadi(t) : t; }
   catch(e){ if (e instanceof HttpError && e.status === 404) return ''; throw e; }
 }
+
+const SAADI_UR = 'ur-tafsir-as-saadi-urdu';
+/** Letters that stood for honorifics in the font the Urdu Saadi was typed in (علیہ السلام, رضی اللہ عنہ, رحمہ اللہ …). */
+const HONORIFIC: Record<string, string> = {u: 'ؑ', i: 'ؑ', p: 'ؑ', t: 'ؓ', r: 'ؓ', '[': 'ؓ', w: 'ؓ', y: 'ؓ', g: 'ؓ', a: 'ؒ', s: 'ؒ', S: 'ؒ', E: ' ﷺ'};
+/**
+ * Tafsir as-Saadi (Urdu) was typed for an honorifics font and an Indo-Pak Quran font. Swap its stand-in letters for the
+ * real signs, its m/| dividers for paragraph breaks, and drop the print-font marks its Quran quotes carry (a stray
+ * takhallus ؔ, a ١ holding pause marks, ۰۰ ayah ends), which other fonts draw as dotted circles.
+ */
+const fixSaadi = (t: string) => t
+  .replace(/(?<=[؀-ۿ])([uiptrwygasSE[])(?![A-Za-z\d])(?=([ؠ-ۓ])?)/g, (_, c: string, next?: string) => HONORIFIC[c] + (next ? ' ' : ''))
+  .replace(/(?<=[؀-ۿ])[m|](?![A-Za-z])\s*/g, '\n')
+  .replace(/﴿[^﴾]*﴾/g, q => q.replace(/ؔ/g, '').replace(/١(?=[ؐؕۖ-ۣۜ])/g, '').replace(/۰۰[۰-۹]*/g, ' '));
 
 /**
  * The tafseer part of an eQuranLibrary ayah page (the curator-approved link URL), as simple HTML paragraphs.
