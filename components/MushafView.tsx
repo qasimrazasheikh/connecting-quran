@@ -12,7 +12,7 @@ import TajweedKey from './TajweedKey';
 import {Icon} from './Icons';
 import {arNum, JUZ_PAGE, SURAH_PAGE} from '@/lib/meta';
 import type {AyahView, ViewMeta} from '@/lib/views';
-import {abtn, cx, sel} from '@/lib/ui';
+import {abtn, btnGhost, cx, sel} from '@/lib/ui';
 
 type Menu = {s: number; a: number; top: number; left: number} | null;
 
@@ -112,6 +112,11 @@ export default function MushafView({p, ayahs, meta, at}: {p: number; ayahs: Ayah
           </div>
         </article>
         <button className={navBtn} id="mPrev" disabled={p <= 1} aria-label="Previous page" onClick={() => go(p - 1)}><Icon.right /></button>
+      </div>
+      {/* page turns under the page too (the side arrows are hidden on small screens); next is on the left, as in a Mushaf */}
+      <div className="mx-auto mt-3 flex max-w-[640px] justify-between gap-2.5">
+        <button className={btnGhost} disabled={p >= 604} onClick={() => go(p + 1)}>← Next page</button>
+        <button className={btnGhost} disabled={p <= 1} onClick={() => go(p - 1)}>Previous page →</button>
       </div>
       <p className="mt-2.5 text-center text-[13px] text-muted">Tap an ayah for options. Swipe or use ← → keys to turn pages.</p>
       {menu && (

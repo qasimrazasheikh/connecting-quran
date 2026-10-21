@@ -19,10 +19,16 @@ export default function TafseerPage({s, a, tab, quote}: {s: number; a: number; t
   useEffect(() => { setTafTab(tab); }, [tab, setTafTab]);
   const go = (ss: number, aa: number) => { const u = studyHref(tab, ss, aa); navStart(u); router.push(u); };
   const step = (d: number) => { const p = stepAyah(surahs, s, a, d); if (p) go(p.s, p.a); };
+  const first = s === 1 && a === 1, last = s === 114 && a === 6;
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 md:p-5">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <AyahPicker s={s} a={a} onGo={go} idPrefix="tp" />
+        {/* the same stepping as the bottom row, so a long tafseer needn't be scrolled through to move on */}
+        <div className="ml-auto flex gap-2">
+          <button className={btnGhost} disabled={first} onClick={() => step(-1)}>← Previous</button>
+          <button className={btnGhost} disabled={last} onClick={() => step(1)}>Next →</button>
+        </div>
       </div>
       <div className={cx('mb-4 rounded-xl bg-surface2 px-4 py-3', quote && !quote.ip && 'no-ip')} id="tpQuote">
         {quote ? <>
@@ -32,9 +38,9 @@ export default function TafseerPage({s, a, tab, quote}: {s: number; a: number; t
       </div>
       <TafseerPanel s={s} a={a} tab={tab} onTab={t => { setTafTab(t); router.replace(studyHref(t, s, a), {scroll: false}); }} />
       <div className="mt-5 flex justify-between gap-2.5">
-        <button className={btnGhost} id="tpPrev" disabled={s === 1 && a === 1} onClick={() => step(-1)}>← Previous ayah</button>
+        <button className={btnGhost} id="tpPrev" disabled={first} onClick={() => step(-1)}>← Previous ayah</button>
         <Link className={cx(btnGhost, 'max-sm:hidden')} href={`/surah/${s}/${a}`}>Read in surah</Link>
-        <button className={btnGhost} id="tpNext" disabled={s === 114 && a === 6} onClick={() => step(1)}>Next ayah →</button>
+        <button className={btnGhost} id="tpNext" disabled={last} onClick={() => step(1)}>Next ayah →</button>
       </div>
     </section>
   );
