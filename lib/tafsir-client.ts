@@ -37,13 +37,20 @@ export function normQuote(t: string): string {
   });
   return out.join(' ');
 }
+/**
+ * Some tafseers lost the line break between a quoted Quran phrase and the Urdu after it (حِجَابًاانہوں, سَوِیًّایعنی).
+ * Tanween always ends a word, so put a space after it (and after the alif/ya that follows ً; not after ؤٌ, whose
+ * Indo-Pak spelling keeps a silent alif: اِمۡرُؤٌا); a glued full-letter
+ * pause sign (عَلِیْمٌم, جَمِیْعًالا) stays attached for normQuote.
+ */
+const GLUED = /(ًّ?(?:[اىیي]|(?![اىیي]))|(?<![ؤٔ])[ٌٍ]ّ?)(?!(?:[طجصقمز]|لا)(?![ء-غف-يٱ-ۓ]))(?=[ء-غف-يٱ-ۓ])/g;
 /** Wrap runs of vowelled Arabic inside Urdu tafseer so they use the Quran font. */
 export function markQuranRuns(html: string): string {
   const box = document.createElement('div'); box.innerHTML = html;
   const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = []; while (walker.nextNode()) nodes.push(walker.currentNode as Text);
   nodes.forEach(node => {
-    const parts = (node.nodeValue || '').split(/(\s+)/);
+    const parts = (node.nodeValue || '').replace(GLUED, '$1 ').split(/(\s+)/);
     const marks = parts.map(t => (t.match(QDIAC) || []).length);
     const isQ: (boolean | 'waqf')[] = parts.map((_, i) => marks[i] > 0);
     parts.forEach((t, i) => { if (!isQ[i] && /^[؀-ۿ]$/.test(t.trim()) && isQ.slice(0, i).includes(true) && isQ.slice(i + 1).includes(true)) isQ[i] = 'waqf'; });
