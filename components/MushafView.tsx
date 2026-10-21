@@ -1,6 +1,6 @@
 'use client';
 import {useRouter} from 'next/navigation';
-import {Fragment, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition} from 'react';
 import {useApp} from './AppProvider';
 import {usePlayer} from './PlayerProvider';
 import {getLastRead, setLastRead} from './resume';
@@ -12,7 +12,7 @@ import TajweedKey from './TajweedKey';
 import {Icon} from './Icons';
 import {arNum, JUZ_PAGE, SURAH_PAGE} from '@/lib/meta';
 import type {AyahView, ViewMeta} from '@/lib/views';
-import {abtn, btnGhost, cx, sel} from '@/lib/ui';
+import {abtn, btnGhost, btnSpin, cx, sel} from '@/lib/ui';
 
 type Menu = {s: number; a: number; top: number; left: number} | null;
 
@@ -26,7 +26,10 @@ export default function MushafView({p, ayahs, meta, at}: {p: number; ayahs: Ayah
   const [hl, setHl] = useState('');  // the ayah named by ?at= (e.g. a surah's first ayah when coming from the reader), if not first on the page
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const go = useCallback((n: number) => { n = Math.min(604, Math.max(1, n | 0)); if (n !== p){ navStart(`/mushaf/${n}`); router.push(`/mushaf/${n}`); } }, [p, router]);
+  // pending until the new page has rendered: the bottom button that asked spins and the old page fades meanwhile
+  const [pending, startNav] = useTransition();
+  const [dir, setDir] = useState(0);
+  const go = useCallback((n: number) => { n = Math.min(604, Math.max(1, n | 0)); if (n !== p){ setDir(n - p); navStart(`/mushaf/${n}`); startNav(() => router.push(`/mushaf/${n}`)); } }, [p, router]);
   const queue = useMemo(() => ayahs.map(x => ({key: `${x.s}:${x.a}`, s: x.s, a: x.a, n: x.n, name: x.sname})), [ayahs]);
   useEffect(() => { setQueue(queue, {onEnd: p < 604 ? () => { navStart(`/mushaf/${p + 1}`); router.push(`/mushaf/${p + 1}`); } : undefined}); }, [queue, setQueue, p, router]);
   // the page's first ayah is where the reader is (Tafseer and the Mushaf link open there)
@@ -86,7 +89,7 @@ export default function MushafView({p, ayahs, meta, at}: {p: number; ayahs: Ayah
       </div>
       <div className="flex items-center justify-center gap-2">
         <button className={navBtn} id="mNext" disabled={p >= 604} aria-label="Next page" onClick={() => go(p + 1)}><Icon.left /></button>
-        <article id="mPage" className="max-w-[640px] flex-1 touch-pan-y rounded-md bg-paper p-1.5 shadow-card md:p-2.5"
+        <article id="mPage" className={cx('max-w-[640px] flex-1 touch-pan-y rounded-md bg-paper p-1.5 shadow-card transition-opacity md:p-2.5', pending && 'opacity-50')}
           onTouchStart={e => { touch.current = {x: e.touches[0].clientX, y: e.touches[0].clientY}; }}
           onTouchEnd={e => { const t = touch.current; if (!t) return; touch.current = null; const dx = e.changedTouches[0].clientX - t.x, dy = e.changedTouches[0].clientY - t.y;
             if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx > 0 ? p + 1 : p - 1); }}>
@@ -115,8 +118,8 @@ export default function MushafView({p, ayahs, meta, at}: {p: number; ayahs: Ayah
       </div>
       {/* page turns under the page too (the side arrows are hidden on small screens); next is on the left, as in a Mushaf */}
       <div className="mx-auto mt-3 flex max-w-[640px] justify-between gap-2.5">
-        <button className={btnGhost} disabled={p >= 604} onClick={() => go(p + 1)}>← Next page</button>
-        <button className={btnGhost} disabled={p <= 1} onClick={() => go(p - 1)}>Previous page →</button>
+        <button className={btnGhost} disabled={p >= 604 || pending} onClick={() => go(p + 1)}>{pending && dir > 0 ? <span className={btnSpin} /> : '←'} Next page</button>
+        <button className={btnGhost} disabled={p <= 1 || pending} onClick={() => go(p - 1)}>Previous page {pending && dir < 0 ? <span className={btnSpin} /> : '→'}</button>
       </div>
       <p className="mt-2.5 text-center text-[13px] text-muted">Tap an ayah for options. Swipe or use ← → keys to turn pages.</p>
       {menu && (
