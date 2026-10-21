@@ -54,7 +54,7 @@ export default async function RootLayout({children}: LayoutProps<'/'>) {
             <main className="mx-auto max-w-[1100px] px-4 pb-32 pt-5">{children}</main>
             <footer className="mx-auto max-w-[1100px] px-4 pb-8 text-center text-[13px] text-muted">
               Quran text (Uthmani and Indo-Pak), translations, word meanings and word audio: <a href="https://quran.foundation" target="_blank" rel="noopener">Quran Foundation</a> (Quran.com). Tajweed text, search and other translations: the AlQuran Cloud API.
-              Uthmani Quran font by the King Fahd Glorious Quran Printing Complex; Indo-Pak Quran font by Ayman Siddiqui (QuranWBW); surah-name calligraphy font from Quran.com.
+              Uthmani Quran font by the King Fahd Glorious Quran Printing Complex; Indo-Pak Quran font by Ayman Siddiqui (QuranWBW); surah-name calligraphy font from Quran.com; Urdu font Mehr Nastaliq Web by <a href="https://mehrtype.blogspot.com/" target="_blank" rel="noopener">Mehr Type</a> and CSaLT, ITU Punjab (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>).
               Tafseer loads from the open-source tafsir_api project and QuranEnc (Rowwad Translation Center).
               Word grammar: <a href="https://corpus.quran.com" target="_blank" rel="noopener">Quranic Arabic Corpus</a> (GNU GPL).
             </footer>
