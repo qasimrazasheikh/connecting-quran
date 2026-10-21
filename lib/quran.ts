@@ -243,16 +243,18 @@ export async function getTafsirText(slug: string, s: number, a: number): Promise
 
 /**
  * The tafseer part of an eQuranLibrary ayah page (the curator-approved link URL), as simple HTML paragraphs.
- * Their page has no API; the note is the one `div.translation` block holding a `span.preformatted`.
+ * Their page has no API; the note is the `whitespace-pre-line` block in the section headed "Tafseer · <work>"
+ * (pages with no note for the ayah have no such section).
  */
 export async function getEqlTafsir(url: string): Promise<string> {
   const r = await fetch(url, {next: {revalidate: REVALIDATE}, signal: AbortSignal.timeout(15000)});
   if (!r.ok) throw new HttpError(r.status, url);
-  const m = (await r.text()).match(/<div class="translation ">\s*<span class="preformatted"[^>]*>([\s\S]*?)<\/span>\s*<\/div>/);
+  const m = (await r.text()).match(/>Tafseer · [\s\S]*?<div class="[^"]*\bwhitespace-pre-line\b[^"]*">([\s\S]*?)<\/div>\s*<\/section>/);
   if (!m) return '';
   return paras(m[1]
-    .replace(/<small><font[^>]*>(\d+)<\/font><\/small>/g, '<sup>$1</sup>')   // footnote numbers
-    .replace(/<(\/?)bold>/g, '<$1b>'));                                         // headings like خلاصہ تفسیر
+    .replace(/<big>([\s\S]*?)<\/big>/g, '<b>$1</b>')   // headings like خلاصہ تفسیر (in a coloured span)
+    .replace(/<\/?span\b[^>]*>/g, ''))                  // colour and Arabic-run spans; the client marks Quran runs itself
+    .replace(/<p>(\d+)\s+/g, '<p><sup>$1</sup> ');      // footnote numbers opening a note (Usmani etc.)
 }
 
 /** Plain text with line breaks (and maybe <br>) as <p> paragraphs. */
