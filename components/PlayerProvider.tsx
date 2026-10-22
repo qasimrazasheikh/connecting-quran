@@ -20,6 +20,7 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
   const ahead = useRef<HTMLAudioElement[]>([]); // silent players that load the next ayahs early, so moving on has no wait
   const queue = useRef<QItem[]>([]); const onEnd = useRef<(() => void) | undefined>(undefined);
   const pendingFirst = useRef(false);
+  const handedOver = useRef(false); // the next page's first ayah was just started: its arrival mustn't stop it
   const [cur, setCur] = useState<string | null>(null); const curRef = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [rep, setRepState] = useState<Rep>({mode: 'off', times: 3, count: 1, loop: 1, from: '', to: ''}); const repRef = useRef(rep);
@@ -81,8 +82,17 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // leaving a page stops audio (unless Mushaf is moving to the next page while reciting)
-  useEffect(() => { if (!pendingFirst.current) stop(); }, [pathname, stop]);
+  // leaving a page stops audio (unless Mushaf is moving to the next page while reciting). The new page's setQueue can run
+  // before this (children's effects first), so a hand-over it already made counts too
+  useEffect(() => { if (!pendingFirst.current && !handedOver.current) stop(); handedOver.current = false; }, [pathname, stop]);
+  // stable, so pages don't re-send their queue whenever play/pause changes (which could use up a pending hand-over)
+  const setQueue = useCallback((q: QItem[], opts?: {onEnd?: () => void}) => {
+    queue.current = q; onEnd.current = opts?.onEnd;
+    if (pendingFirst.current && q.length){
+      pendingFirst.current = false; handedOver.current = true; play(q[0].key);
+      setTimeout(() => { handedOver.current = false; }, 0);   // only for this navigation's effects
+    }
+  }, [play]);
   // space bar plays/pauses
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -95,16 +105,13 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
 
   const value = useMemo<PCtx>(() => ({
     cur, playing,
-    setQueue: (q, opts) => {
-      queue.current = q; onEnd.current = opts?.onEnd;
-      if (pendingFirst.current && q.length){ pendingFirst.current = false; play(q[0].key); }
-    },
+    setQueue,
     toggle: key => { const el = audio.current; if (key === curRef.current && el?.getAttribute('src')){ if (el.paused) el.play(); else el.pause(); } else play(key); },
     playKey: play,
     playFirst: () => { if (queue.current[0]) play(queue.current[0].key); },
     stop,
     playFirstOnNextQueue: () => { pendingFirst.current = true; },
-  }), [cur, playing, play, stop]);
+  }), [cur, playing, play, stop, setQueue]);
 
   const setSpeed = (v: number) => { update({speed: v}); if (audio.current) audio.current.defaultPlaybackRate = audio.current.playbackRate = v; };
   const setSleep = (min: number | 'ayah') => {
