@@ -13,10 +13,11 @@ export default function Bookmarks() {
       <section className={rhead}><h1 className="mb-0.5 mt-1 text-[22px] font-bold">Bookmarks</h1><div className="text-sm text-muted">Saved in this browser</div></section>
       {!ready ? null : bookmarks.length ? (
         <div className={grid}>
+          {/* a saved ayah opens on its Mushaf page, highlighted there */}
           {bookmarks.map(b => (
             <div key={b.k} className={linkCard}>
-              <Link className={numBadge} href={`/surah/${b.s}/${b.a}`}>{b.s}</Link>
-              <Link className="min-w-0 flex-1 text-ink no-underline" href={`/surah/${b.s}/${b.a}`}><b className="block text-[15px]">{b.name} {b.k}</b><span className="text-[12.5px] text-muted">Saved {new Date(b.t).toLocaleDateString()}</span></Link>
+              <Link className={numBadge} href={`/mushaf?at=${b.k}`}>{b.s}</Link>
+              <Link className="min-w-0 flex-1 text-ink no-underline" href={`/mushaf?at=${b.k}`}><b className="block text-[15px]">{b.name} {b.k}</b><span className="text-[12.5px] text-muted">Saved {new Date(b.t).toLocaleDateString()}</span></Link>
               <button className={abtn} data-del={b.k} title="Remove" onClick={() => toggleBookmark(b.s, b.a)}>✕</button>
             </div>
           ))}
