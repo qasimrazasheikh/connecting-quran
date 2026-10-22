@@ -126,9 +126,10 @@ button{cursor:pointer}
   .w{cursor:pointer;border-radius:4px;transition:background .12s}
   .w:hover{background:color-mix(in srgb,var(--brand) 12%,transparent)}
   .w.wsel{background:color-mix(in srgb,var(--accent) 30%,transparent)}
-  /* Indo-Pak Nastaleeq ayah-end tokens are private-use glyphs that browsers treat as left-to-right. With word-by-word on,
-     words are boxes (neutral for text direction), so those tokens would flip the order of the words between them: isolate them */
-  .wbw .wx{unicode-bidi:isolate}
+  /* Indo-Pak Nastaleeq ayah-end tokens are private-use glyphs that browsers treat as left-to-right. Next to another one
+     (the next ayah may open with one, e.g. 25:2's ligature alif) they form a left-to-right run that swaps their order;
+     with word-by-word on, words are boxes (neutral for text direction), so they would flip whole words: isolate them */
+  .wx{unicode-bidi:isolate}
   .related-ar{font-size:calc(var(--ar-size) * .8);line-height:2.1}
   .related-ar mark{background:none;color:var(--brand)}
   .wbw .w{display:inline-flex;flex-direction:column;align-items:center;vertical-align:top;margin:0 .12em .3em;line-height:1.9}
