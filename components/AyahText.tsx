@@ -32,7 +32,7 @@ export default function AyahText({s, a, words, wbw, className, endmark = true, o
               openWord({s, a, ...(it.byToken ? {t: it.n} : {w: it.n}), text, font: getComputedStyle(el).fontFamily, rect: el.getBoundingClientRect(), onAyah});
             }}>
             <span className="wa">{it.toks.map((t, j) => <Fragment key={j}>{j ? ' ' : ''}<TokView t={t} /></Fragment>)}</span>
-            {wbw && it.m && <span className="wm" dir="auto">{it.m}</span>}
+            {wbw && it.m && <span className={cx('wm', /[؀-ۿ]/.test(it.m) && 'wm-ur')} dir="auto">{it.m}</span>}
           </span></Fragment>
         );
       })}

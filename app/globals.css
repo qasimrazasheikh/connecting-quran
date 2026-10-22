@@ -133,6 +133,8 @@ button{cursor:pointer}
   .related-ar mark{background:none;color:var(--brand)}
   .wbw .w{display:inline-flex;flex-direction:column;align-items:center;vertical-align:top;margin:0 .12em .3em;line-height:1.9}
   .wm{font-family:var(--font-sans);font-size:max(11px,calc(var(--ar-size) * .36));line-height:1.3;color:var(--muted);max-width:9em;text-align:center;white-space:normal;unicode-bidi:plaintext}
+  /* Urdu meanings in the translations' Nastaliq, a little larger and taller so it reads like them */
+  .wm.wm-ur{font-family:var(--font-ur);font-size:max(13px,calc(var(--ar-size) * .44));line-height:1.9;max-width:8em}
 
   /* tajweed colours */
   .tj-h,.tj-s,.tj-l{color:#9a9a9a}.tj-n{color:#537fff}.tj-p{color:#4050ff}.tj-o{color:#2144c1}.tj-m{color:#000ebc}.tj-q{color:#dd0008}
