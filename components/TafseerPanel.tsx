@@ -1,5 +1,5 @@
 'use client';
-import {Fragment, useEffect, useMemo, useRef, useState} from 'react';
+import {Fragment, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
 import {useApp} from './AppProvider';
 import {Icon} from './Icons';
 import Link from 'next/link';
@@ -78,7 +78,10 @@ const sub = (m: TafsirEdition | undefined, _pick: boolean) => <>
 /** Divider between the reader's picks and the other tafseers of the language. */
 const Others = ({n, lang}: {n: number; lang: TLang}) => <div className="mb-2 mt-3.5 text-[12px] font-semibold uppercase tracking-wider text-muted">Other {langText(lang)} tafseers ({n})</div>;
 
-function Accordion({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; more: number; onMore: () => void}) {
+/** Ayah stepping supplied by the Tafseer page; `compact` is the phone version, beside the layout switch. */
+type Nav = (compact: boolean) => ReactNode;
+
+function Accordion({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLang; more: number; onMore: () => void; nav?: Nav}) {
   const {openSettings, update} = useApp();
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
   const [open, setOpen] = useState<Set<string>>(() => new Set(accOpen));
@@ -97,6 +100,7 @@ function Accordion({s, a, lang, more, onMore}: {s: number; a: number; lang: TLan
         <button className={abtn} data-acc="collapse" onClick={() => { accOpen.clear(); setOpen(new Set()); }}>Collapse all</button>
         <button className={abtn} data-acc="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         <button className={abtn} data-acc="layout" title="Switch to list + reader layout" onClick={() => update({tafLayout: 'split'})}><Icon.book />List view</button>
+        {nav && <span className="flex gap-1 sm:hidden">{nav(true)}</span>}
       </div>
       {list.map((slug, i) => {
         const m = meta(slug), isOpen = open.has(slug), st = status[slug], pick = i < picks.length;
@@ -122,7 +126,7 @@ function Accordion({s, a, lang, more, onMore}: {s: number; a: number; lang: TLan
   );
 }
 
-function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; more: number; onMore: () => void}) {
+function Split({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLang; more: number; onMore: () => void; nav?: Nav}) {
   const {settings, update, openSettings} = useApp();
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
   const cur = list.includes(settings.tafLast) ? settings.tafLast : list[0];
@@ -140,6 +144,7 @@ function Split({s, a, lang, more, onMore}: {s: number; a: number; lang: TLang; m
         {more > 0 && <button className={abtn} onClick={onMore} title="More tafseers on other sites"><Icon.link />More tafseers</button>}
         <button className={abtn} data-ts="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         <button className={abtn} data-ts="layout" title="Switch to accordion layout" onClick={() => update({tafLayout: 'accordion'})}><Icon.chev />Accordion view</button>
+        {nav && <span className="flex gap-1 sm:hidden">{nav(true)}</span>}
       </div>
       <div className="@container">
         <div className="flex flex-col gap-2.5 @[620px]:flex-row @[620px]:items-start">
@@ -329,7 +334,7 @@ function RelatedAyahs({s, a, count}: {s: number; a: number; count?: number}) {
 }
 
 /** Study panel for one ayah (drawer and tafseer page): tafseer text, more tafseers on other sites, video lectures. */
-export default function TafseerPanel({s, a, tab, onTab}: {s: number; a: number; tab?: StudyTab; onTab?: (t: StudyTab) => void}) {
+export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: number; tab?: StudyTab; onTab?: (t: StudyTab) => void; nav?: Nav}) {
   const {settings, update, surahs, tafTab: ctxTab, setTafTab} = useApp();
   const tafTab = tab ?? ctxTab;
   const sname = surahs[s - 1]?.en || '';
@@ -348,8 +353,12 @@ export default function TafseerPanel({s, a, tab, onTab}: {s: number; a: number; 
   useEffect(() => { if (noMore) pick('text'); }, [noMore]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
-      <div className={cx(segWrap, 'mb-2.5 w-full sm:w-auto sm:max-w-xs')} role="group" aria-label="Tafseer language">
-        {TLANGS.map(([code, label]) => <button key={code} data-lang={code} aria-pressed={lang === code} className={segBtn(lang === code)} onClick={() => update({tafLang: code})}>{label}</button>)}
+      <div className="mb-2.5 flex items-center gap-2">
+        <div className={cx(segWrap, 'w-full sm:w-auto sm:max-w-xs')} role="group" aria-label="Tafseer language">
+          {TLANGS.map(([code, label]) => <button key={code} data-lang={code} aria-pressed={lang === code} className={segBtn(lang === code)} onClick={() => update({tafLang: code})}>{label}</button>)}
+        </div>
+        {/* ayah stepping sits by the tafseers: here on wider screens, beside the layout switch on phones */}
+        {nav && <div className="ml-auto flex gap-2 max-sm:hidden">{nav(false)}</div>}
       </div>
       <div className="mb-3 flex overflow-x-auto border-b border-line [scrollbar-width:none] sm:gap-1">
         <button data-tab="text" className={tabBtn(tafTab === 'text')} onClick={() => pick('text')}><Icon.book className="max-sm:hidden" /> Tafseer</button>
@@ -357,10 +366,11 @@ export default function TafseerPanel({s, a, tab, onTab}: {s: number; a: number; 
         <button data-tab="videos" className={tabBtn(tafTab === 'videos')} onClick={() => pick('videos')}><Icon.yt className="max-sm:hidden" /> <span className="max-sm:hidden">Video lectures</span><span className="sm:hidden">Videos</span> {count(study?.videos.length)}</button>
         <button data-tab="related" className={tabBtn(tafTab === 'related')} onClick={() => pick('related')}><Icon.repeat className="max-sm:hidden" /> Related {count(study?.related)}</button>
       </div>
+      {nav && tafTab !== 'text' && <div className="mb-2 flex justify-end gap-1 sm:hidden">{nav(true)}</div>}
       {tafTab === 'videos' ? <VideoCards videos={study?.videos ?? null} sname={sname} />
         : tafTab === 'more' ? <MoreTafseers links={links} lang={lang} s={s} a={a} />
         : tafTab === 'related' ? <RelatedAyahs s={s} a={a} count={study?.related} />
-        : settings.tafLayout === 'split' ? <Split s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} /> : <Accordion s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} />}
+        : settings.tafLayout === 'split' ? <Split s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} nav={nav} /> : <Accordion s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} nav={nav} />}
     </div>
   );
 }

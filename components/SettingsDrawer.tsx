@@ -67,11 +67,13 @@ export default function SettingsDrawer() {
       </select>
       <label className={opt}><input type="checkbox" id="autoPlay" checked={S.autoPlay} onChange={e => set({autoPlay: e.target.checked})} />Continue to the next ayah</label>
       <label className={opt}><input type="checkbox" id="autoScroll" checked={S.autoScroll} onChange={e => set({autoScroll: e.target.checked})} />Scroll to the ayah being recited</label>
+      <label className={opt}><input type="checkbox" id="recTrans" checked={S.recTrans} onChange={e => set({recTrans: e.target.checked})} />Show the translation by the ayah being recited <small className="ml-auto text-xs text-muted">Mushaf</small></label>
       <h4 className={h4}>Reading aids</h4>
       <label className={opt}><input type="checkbox" id="wbwOn" checked={S.wbw} onChange={e => set({wbw: e.target.checked})} />Word-by-word meanings under each word</label>
       <div className="my-1.5"><Seg id="wbwLang" value={S.wbwLang} onPick={v => set({wbwLang: v})} items={[['ur', 'Urdu meanings'], ['en', 'English meanings']]} /></div>
       <label className={opt}><input type="checkbox" id="tjOn" checked={S.tajweed} onChange={e => { set({tajweed: e.target.checked}); if (e.target.checked && S.script === 'indopak') toast('Tajweed colours show in Uthmani script'); }} />Tajweed colours <small className="ml-auto text-xs text-muted">Uthmani script only</small></label>
       <label className={opt}><input type="checkbox" id="wsOn" checked={S.wordSound} onChange={e => set({wordSound: e.target.checked})} />Play a word&apos;s sound when I tap it</label>
+      <label className={opt}><input type="checkbox" id="mTrans" checked={S.mTrans} onChange={e => set({mTrans: e.target.checked})} />Show an ayah&apos;s translation on hover or tap <small className="ml-auto text-xs text-muted">Mushaf</small></label>
       <h4 className={h4}>Text size</h4>
       <div className="flex items-center gap-2.5 text-sm">Arabic <input type="range" min={22} max={52} id="arR" className="flex-1 accent-brand" value={S.arSize} onChange={e => set({arSize: +e.target.value})} /><span className="w-6">{S.arSize}</span></div>
       <div className="mt-2 flex items-center gap-2.5 text-sm">Translation <input type="range" min={14} max={28} id="trR" className="flex-1 accent-brand" value={S.trSize} onChange={e => set({trSize: +e.target.value})} /><span className="w-6">{S.trSize}</span></div>

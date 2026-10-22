@@ -3,11 +3,11 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 /** Font class for a name written in Arabic script ('' for Latin): letters only Urdu uses pick Nastaliq, else Naskh. */
 export const natCls = (t?: string) => !t || !/[\u0600-\u06FF]/.test(t) ? '' : /[ٹڈڑںےۓہھگکیۂ]/.test(t) ? 'nat-ur' : 'nat-ar';
 export const btn = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-brand bg-brand px-3.5 py-2 text-sm font-medium text-on-brand no-underline shadow-[0_4px_14px_color-mix(in_srgb,var(--brand)_28%,transparent)] disabled:cursor-default disabled:opacity-45 [&_svg]:size-4 [&_svg]:flex-none';
-/** A small spinner to put inside a button while what it asked for loads (the .spin ring at button size). */
-export const btnSpin = 'spin !size-4 !border-2';
 export const btnGhost = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-brand bg-transparent px-3.5 py-2 text-sm font-medium text-brand no-underline disabled:cursor-default disabled:opacity-45 [&_svg]:size-4 [&_svg]:flex-none';
 export const btnYt = 'inline-flex items-center justify-center gap-1.5 rounded-[11px] border border-yt bg-yt px-3.5 py-2 text-sm font-medium !text-white no-underline [&_svg]:size-4 [&_svg]:flex-none';
 export const iconBtn = 'grid size-[38px] flex-none place-items-center rounded-[9px] border border-line bg-surface text-ink hover:border-brand hover:text-brand [&_svg]:size-[19px]';
+/** The ayah's Tafseer button: a filled, always-labelled pill, so it isn't mistaken for the bookmark icon beside it. */
+export const tafBtn = 'inline-flex items-center gap-1.5 rounded-lg border-0 bg-brand-soft px-2.5 py-1.5 text-[13px] font-semibold text-brand no-underline hover:bg-brand hover:text-white [&_svg]:size-4';
 export const abtn = 'inline-flex items-center gap-1.5 rounded-lg border-0 bg-transparent px-2 py-1.5 text-[13px] text-muted no-underline hover:bg-surface2 hover:text-brand [&_svg]:size-4';
 export const card = 'rounded-2xl border border-line bg-surface shadow-card';
 export const linkCard = 'flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3 text-ink no-underline shadow-card transition hover:-translate-y-px hover:border-brand hover:shadow-[0_10px_28px_color-mix(in_srgb,var(--brand)_16%,transparent)]';

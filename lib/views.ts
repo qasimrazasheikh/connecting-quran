@@ -74,17 +74,20 @@ export async function juzView(j: number, st: Settings){
 }
 
 export async function mushafView(p: number, st: Settings){
-  const surahs = await getSurahList();
+  const [surahs, eds] = await Promise.all([getSurahList(), getTransEditions()]);
   const ipOn = st.script === 'indopak', tjOn = st.tajweed && !ipOn;
-  const [cloud, uth, ip, tj, words, bism] = await Promise.all([
+  // only the first chosen translation: the Mushaf shows it in popovers (hover/tap, and by the ayah being recited)
+  const [cloud, uth, ip, tj, words, bism, trd] = await Promise.all([
     getPageEdition(p, 'quran-uthmani'), uthText('page', p), ipOn ? ipText('page', p) : null,
     tjOn ? getPageEdition(p, 'quran-tajweed').catch(() => null) : null,
     (st.wbw || ipOn) ? getWords('page', p, st.wbwLang).catch(() => null) : null, bismFor(ipOn),
+    st.trans[0] ? getPageEdition(p, st.trans[0]).catch(() => null) : null,
   ]);
+  const tr = trd ? [{meta: transMeta(eds, trd.edition.identifier), ayahs: trd.ayahs}] : [];
   return {
     surahs,
-    meta: {ip: !!ip, tajweed: !!tj && !ip, bism: ip ? bism : BISM_UTH, trans: []} as ViewMeta,
-    ayahs: makeAyahs(cloud.ayahs, uth, ip ? null : tj?.ayahs || null, ip, words, [], st, ay => surahs[ay.surah.number - 1]?.en || ay.surah.englishName),
+    meta: {ip: !!ip, tajweed: !!tj && !ip, bism: ip ? bism : BISM_UTH, trans: tr.map(t => ({id: t.meta.id, name: t.meta.name}))} as ViewMeta,
+    ayahs: makeAyahs(cloud.ayahs, uth, ip ? null : tj?.ayahs || null, ip, words, tr, st, ay => surahs[ay.surah.number - 1]?.en || ay.surah.englishName),
     surahArNames: cloud.ayahs.map(a => a.surah.name),
   };
 }

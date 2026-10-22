@@ -8,7 +8,7 @@ import AyahText from './AyahText';
 import SurahName from './SurahName';
 import {Icon} from './Icons';
 import type {AyahView, ViewMeta} from '@/lib/views';
-import {abtn, cx} from '@/lib/ui';
+import {abtn, cx, tafBtn} from '@/lib/ui';
 
 async function copyText(text: string, msg: string, toast: (m: string) => void){
   try{ await navigator.clipboard.writeText(text); toast(msg); }catch{ toast('Could not copy'); }
@@ -23,15 +23,18 @@ function AyahCard({ay, meta}: {ay: AyahView; meta: ViewMeta}) {
   return (
     <article id={`a-${ay.s}-${ay.a}`} data-key={key} data-s={ay.s} data-a={ay.a}
       className={cx('ayah mb-2.5 scroll-mt-20 rounded-2xl border border-line bg-surface p-3.5 shadow-card md:px-[18px] md:py-4', isCur && 'playing')}>
-      <div className="mb-1.5 flex items-center gap-1.5">
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
         <span className="rounded-full bg-brand-soft px-[9px] py-[3px] text-[13px] font-semibold text-brand">{key}</span>
         <span className="flex-1" />
-        <button className={abtn} data-act="play" title="Play recitation" onClick={() => toggle(key)}>{isCur && playing ? <Icon.pause /> : <Icon.play />}<span className="max-md:hidden">{isCur && playing ? 'Pause' : 'Play'}</span></button>
-        <button className={abtn} data-act="tafsir" title="Tafseer" onClick={() => openTafsir(ay.s, ay.a, 'text')}><Icon.book /><span className="max-md:hidden">Tafseer</span></button>
-        <button className={cx(abtn, 'font-semibold !text-yt')} data-act="videos" title="Video lectures on this surah" onClick={() => openTafsir(ay.s, ay.a, 'videos')}><Icon.yt /><span>Videos</span></button>
-        <button className={cx(abtn, bm && '!text-accent')} data-act="bm" title="Bookmark" onClick={() => toggleBookmark(ay.s, ay.a)}>{bm ? <Icon.markOn /> : <Icon.mark />}</button>
-        <button className={abtn} data-act="copy" title="Copy" onClick={copy}><Icon.copy /></button>
-        <button className={abtn} data-act="link" title="Copy link" onClick={link}><Icon.link /></button>
+        {/* on phones the actions take their own full-width row under the ayah number, so the labelled Tafseer fits */}
+        <div className="flex items-center gap-1.5 max-sm:w-full max-sm:justify-between max-sm:gap-0 max-sm:[&>button]:px-1.5">
+          <button className={abtn} data-act="play" title="Play recitation" onClick={() => toggle(key)}>{isCur && playing ? <Icon.pause /> : <Icon.play />}<span className="max-md:hidden">{isCur && playing ? 'Pause' : 'Play'}</span></button>
+          <button className={tafBtn} data-act="tafsir" title="Read the tafseer of this ayah" onClick={() => openTafsir(ay.s, ay.a, 'text')}><Icon.book /><span>Tafseer</span></button>
+          <button className={cx(abtn, 'font-semibold !text-yt')} data-act="videos" title="Video lectures on this surah" onClick={() => openTafsir(ay.s, ay.a, 'videos')}><Icon.yt /><span>Videos</span></button>
+          <button className={cx(abtn, bm && '!text-accent')} data-act="bm" title="Bookmark" onClick={() => toggleBookmark(ay.s, ay.a)}>{bm ? <Icon.markOn /> : <Icon.mark />}</button>
+          <button className={abtn} data-act="copy" title="Copy" onClick={copy}><Icon.copy /></button>
+          <button className={abtn} data-act="link" title="Copy link" onClick={link}><Icon.link /></button>
+        </div>
       </div>
       {settings.showAr && <div className="atext my-1.5 mb-2.5" dir="rtl"><AyahText s={ay.s} a={ay.a} words={ay.words} wbw={settings.wbw && ay.words.some(w => w.k === 'w' && w.m)} className={cx('block', meta.ip && 'is-ip')} /></div>}
       {ay.trans.map((t, i) => (
