@@ -9,6 +9,7 @@ import TajweedKey from '@/components/TajweedKey';
 import {ChangeTranslations, PlayAll} from '@/components/ReaderBits';
 import {readSettings} from '@/lib/server-settings';
 import {getSurahList} from '@/lib/quran';
+import {seo} from '@/lib/seo';
 import {surahView} from '@/lib/views';
 import {QUIZ_PART} from '@/lib/meta';
 import {videoCards} from '@/lib/catalog';
@@ -22,9 +23,11 @@ const sep = 'mx-1 hidden h-5 w-px bg-line md:block';
 const num = (n: string) => (/^\d{1,3}$/.test(n) && +n >= 1 && +n <= 114 ? +n : 0);
 
 export async function generateMetadata({params}: P): Promise<Metadata> {
-  const n = num((await params).n);
-  try{ const s = (await getSurahList())[n - 1]; if (s) return {title: `Surah ${s.en} (${s.n}) — ${s.mean}`, description: `Read Surah ${s.en} (${s.ar}) with Urdu and English translation and tafseer. ${s.ayahs} ayahs, ${s.type}.`}; }catch{ /* default title */ }
-  return {title: 'Surah'};
+  // checked here too: metadata is worked out before the page starts streaming, so a bad address still gets a real 404
+  const n = num((await params).n); if (!n) notFound();
+  // /surah/2/255 shows the whole surah, so every ayah address names /surah/2 as the page to index
+  const s = (await getSurahList())[n - 1];
+  return seo(`/surah/${n}`, `Surah ${s.en} (${s.n}) — ${s.mean}`, `Read Surah ${s.en} (${s.ar}) with Urdu and English translation and tafseer. ${s.ayahs} ayahs, ${s.type}.`);
 }
 
 export default async function SurahPage({params}: P) {

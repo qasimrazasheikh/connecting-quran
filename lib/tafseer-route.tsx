@@ -5,6 +5,7 @@ import type {StudyTab} from './step';
 import {readSettings} from './server-settings';
 import {getSurahList} from './quran';
 import {ayahQuote} from './views';
+import {seo} from './seo';
 
 /** Shared by /tafseer/[s]/[a] and /videos/[s]/[a]. */
 export async function parseAyah(params: Promise<{s: string; a: string}>) {
@@ -17,13 +18,15 @@ export async function parseAyah(params: Promise<{s: string; a: string}>) {
 }
 export async function tafseerMeta(params: Promise<{s: string; a: string}>, tab: StudyTab): Promise<Metadata> {
   const {s, a, name} = await parseAyah(params);
+  // the lectures are per surah, so every ayah's video address names the surah's first as the page to index;
+  // a tafseer page's ?tab= views name the plain tafseer address
   return tab === 'videos'
-    ? {title: `Video lectures · ${name} ${s}:${a}`, description: `Dr Israr Ahmed and Nouman Ali Khan lectures on Surah ${name}.`}
-    : {title: `Tafseer of ${name} ${s}:${a}`, description: `Read several Urdu, English and Arabic tafseers of Quran ${s}:${a} (Surah ${name}).`};
+    ? seo(`/videos/${s}/1`, `Video lectures · Surah ${name}`, `Dr Israr Ahmed and Nouman Ali Khan lectures on Surah ${name}.`)
+    : seo(`/tafseer/${s}/${a}`, `Tafseer of ${name} ${s}:${a}`, `Read several Urdu, English and Arabic tafseers of Quran ${s}:${a} (Surah ${name}).`);
 }
 export async function TafseerRoute({params, tab}: {params: Promise<{s: string; a: string}>; tab: StudyTab}) {
-  const {s, a} = await parseAyah(params);
+  const {s, a, name} = await parseAyah(params);
   const {settings} = await readSettings();
   const quote = await ayahQuote(s, a, settings).catch(() => null);
-  return <TafseerPage s={s} a={a} tab={tab} quote={quote} />;
+  return <><h1 className="sr-only">{tab === 'videos' ? 'Video lectures' : 'Tafseer'} · {name} {s}:{a}</h1><TafseerPage s={s} a={a} tab={tab} quote={quote} /></>;
 }

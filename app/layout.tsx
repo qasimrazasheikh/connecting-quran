@@ -22,10 +22,15 @@ import WordCard from '@/components/WordCard';
 import TranslateBar from '@/components/TranslateBar';
 import {readSettings} from '@/lib/server-settings';
 import {getSurahList, type SurahInfo} from '@/lib/quran';
+import {OG_IMAGE, SITE, SITE_NAME} from '@/lib/seo';
 
+// pages add their own canonical address and preview fields (seo() in lib/seo.ts); these are the fallbacks
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: {default: 'Connecting Quran — Quran, Translation & Tafseer', template: '%s · Connecting Quran'},
   description: 'Read the Holy Quran with Urdu and English translations, tafseer, word-by-word meanings, grammar, recitation and quizzes.',
+  openGraph: {type: 'website', siteName: SITE_NAME, title: 'Connecting Quran — Quran, Translation & Tafseer', description: 'Read the Holy Quran with Urdu and English translations, tafseer, word-by-word meanings, grammar, recitation and quizzes.', locale: 'en', images: [OG_IMAGE]},
+  twitter: {card: 'summary_large_image', images: [OG_IMAGE.url]},
 };
 export const viewport: Viewport = {width: 'device-width', initialScale: 1, themeColor: '#1b1d5e'};
 

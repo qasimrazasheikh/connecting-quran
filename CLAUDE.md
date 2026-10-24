@@ -49,6 +49,8 @@ new external call, add a matching mock route there or the e2e run will break.
 - `components/` — almost all are client components. `AppProvider` owns settings, bookmarks, toasts and the open
   drawers/panels (settings, tafseer, word card); `PlayerProvider` owns the audio player. Both are mounted in `app/layout.tsx`.
   `resume.ts` keeps the last-read ayah so Mushaf and Tafseer can open where the reader left off.
+- `proxy.ts` — checks surah/ayah/page/juz/quiz numbers before a page renders and sends a real 404 for bad ones (the root
+  `loading.tsx` streams every page, so a page's own `notFound()` can only answer 200 + noindex). Keep it in step with new routes.
 - `app/admin/` — the curator area: `login/`, and `(panel)/` (overview + pending queue, sources, entries by ayah).
   `actions.ts` holds the server actions; each calls `assertAdmin()` itself.
 - `lib/` — data and helpers:
@@ -67,6 +69,8 @@ new external call, add a matching mock route there or the e2e run will break.
   - `grammar.ts` (Quranic Arabic Corpus tags → English/Arabic labels), `highlight.ts` (search highlighting with loose
     Arabic/Urdu matching), `quiz.ts` (10-question quiz builder), `step.ts` (prev/next ayah across surahs),
     `tafseer-route.tsx` (shared page logic for the tafseer routes).
+  - `seo.ts` — `SITE` (the canonical www address) and `seo(path, title, description)`: every public page's metadata goes
+    through it so it gets a canonical link and full link-preview fields (`public/og.jpg`). `app/sitemap.ts` / `app/robots.ts` use `SITE`.
   - `ui.ts` — shared Tailwind class strings (`btn`, `btnGhost`, `iconBtn`, …) and `cx()`; reuse them instead of
     re-spelling button/card styles.
 

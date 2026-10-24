@@ -1,9 +1,10 @@
+import {seo} from '@/lib/seo';
 import SearchView from '@/components/SearchView';
 import {readSettings} from '@/lib/server-settings';
 import {searchQuran} from '@/lib/quran';
 import {AR_DIAC} from '@/lib/text';
 
-export const metadata = {title: 'Search'};
+export const metadata = seo('/search', 'Search', 'Search the Quran in Arabic, or in its Urdu and English translations.');
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || '';
 
 export default async function SearchPage({searchParams}: PageProps<'/search'>) {

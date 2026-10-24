@@ -8,13 +8,17 @@ import {readSettings} from '@/lib/server-settings';
 import {juzView} from '@/lib/views';
 import {arNum} from '@/lib/meta';
 import {btnGhost, rhead} from '@/lib/ui';
+import {seo} from '@/lib/seo';
+
+const juzNum = (js: string) => (/^\d{1,2}$/.test(js) && +js >= 1 && +js <= 30 ? +js : 0);
 
 export async function generateMetadata({params}: PageProps<'/juz/[j]'>) {
-  return {title: `Juz ${(await params).j}`};
+  const j = juzNum((await params).j); if (!j) notFound();
+  return seo(`/juz/${j}`, `Juz ${j}`, `Read Juz ${j} of the Quran with Urdu and English translation and tafseer.`);
 }
 export default async function JuzPage({params}: PageProps<'/juz/[j]'>) {
   const js = (await params).j;
-  const j = /^\d{1,2}$/.test(js) && +js >= 1 && +js <= 30 ? +js : 0; if (!j) notFound();
+  const j = juzNum(js); if (!j) notFound();
   const {settings} = await readSettings();
   let v;
   try{ v = await juzView(j, settings); }catch(e){ return <ErrorBox msg={(e as Error).message} />; }
