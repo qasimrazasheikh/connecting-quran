@@ -20,8 +20,9 @@ function valid(sec: string, [a, b, ...more]: string[]): boolean {
   if (more.length) return false;
   switch (sec){
     case 'surah': return int(a, 114) && (b === undefined || int(b, ayahs(a)));
-    case 'tafseer': case 'videos': return int(a, 114) && (b === undefined || int(b, ayahs(a)));
-    case 'quiz': return int(a, 114) && (b === undefined || int(b, Math.ceil(ayahs(a) / QUIZ_PART)));
+    // /tafseer, /videos and /quiz on their own are the sections' own pages (header links)
+    case 'tafseer': case 'videos': return a === undefined || (int(a, 114) && (b === undefined || int(b, ayahs(a))));
+    case 'quiz': return a === undefined || (int(a, 114) && (b === undefined || int(b, Math.ceil(ayahs(a) / QUIZ_PART))));
     case 'mushaf': return b === undefined && (a === undefined || int(a, 604));
     case 'juz': return b === undefined && (a === undefined || int(a, 30));
   }
