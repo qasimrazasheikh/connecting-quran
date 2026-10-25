@@ -26,9 +26,14 @@ await p.fill('#q', '114'); ok(await p.locator('main a[href^="/surah/"]').count()
 await p.fill('#q', ''); await shot('home');
 
 console.log('# surah reader');
-await go('/surah/2/3'); await p.waitForSelector('#a-2-286');
-ok(await p.locator('article.ayah').count() === 286, 'ayah count');
-ok(await p.locator('#a-2-3.hl').count() === 1, 'focus highlight');
+// long surahs render in batches of 20: opens at the chosen ayah, earlier ones fill in above, the rest on scrolling down
+await go('/surah/2/3'); await p.waitForSelector('#a-2-3.hl');
+ok(true, 'focus highlight');
+await p.waitForSelector('#a-2-1');
+const firstBatch = await p.locator('article.ayah').count();
+ok(firstBatch >= 20 && firstBatch <= 40, 'long surah opens with one batch', firstBatch);
+for (let i = 0; i < 60 && !(await p.locator('#a-2-286').count()); i++){ await p.mouse.wheel(0, 8000); await p.waitForTimeout(150); }
+ok(await p.locator('article.ayah').count() === 286, 'scrolling down renders all 286 ayahs');
 ok(!(await p.locator('#a-2-1 .atext').innerText()).includes('بِسْمِ'), 'bismillah stripped from 2:1');
 await shot('surah');
 

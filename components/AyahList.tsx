@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
-import {Fragment, useEffect, useMemo} from 'react';
+import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useApp} from './AppProvider';
 import {setLastRead} from './resume';
+import {SHOW_AYAH_EVENT} from './show-ayah';
 import {usePlayer} from './PlayerProvider';
 import AyahText from './AyahText';
 import SurahName from './SurahName';
@@ -47,12 +48,73 @@ function AyahCard({ay, meta}: {ay: AyahView; meta: ViewMeta}) {
   );
 }
 
-/** List of ayah cards for a surah or juz. Registers the audio queue, remembers the last ayah read, and jumps to a chosen ayah. */
+/** Lists up to this long render whole; longer ones (Al-Baqarah has 286 ayahs, a juz up to ~560) render in batches. */
+const ALL_UNDER = 40, BATCH = 20;
+type Win = [number, number]; // rendered ayahs: indexes lo (inclusive) to hi (exclusive)
+
+/** The plain text of ayahs not rendered yet, so search engines and screen readers still get the whole surah. */
+const PlainText = ({items}: {items: AyahView[]}) => items.length ? (
+  <div className="sr-only">{items.map(ay => <div key={ay.s + ':' + ay.a}>
+    <p>{`${ay.s}:${ay.a}`}</p><p lang="ar" dir="rtl">{ay.copy}</p>{ay.trans.map((t, i) => <p key={i} lang={t.lang} dir={t.dir}>{t.text}</p>)}
+  </div>)}</div>
+) : null;
+
+/**
+ * List of ayah cards for a surah or juz. Registers the audio queue, remembers the last ayah read, and jumps to a chosen ayah.
+ * Long lists start with one batch (from the chosen ayah, if any) and grow as the reader nears either end; the whole list
+ * stays in memory, so a batch appears at once. showAyah() (player, ayah picker) renders a card on request.
+ */
 export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[]; meta: ViewMeta; mode: 'surah' | 'juz'; focus?: number}) {
   const {surahs} = useApp();
   const {setQueue} = usePlayer();
   const queue = useMemo(() => ayahs.map(x => ({key: `${x.s}:${x.a}`, s: x.s, a: x.a, n: x.n, name: x.sname})), [ayahs]);
   useEffect(() => { setQueue(queue); }, [queue, setQueue]);
+
+  const first = (): Win => {
+    if (ayahs.length <= ALL_UNDER) return [0, ayahs.length];
+    const f = focus && mode === 'surah' ? Math.max(0, ayahs.findIndex(x => x.a === focus)) : 0;
+    return [f, Math.min(ayahs.length, f + BATCH)];
+  };
+  // a new surah, juz or chosen ayah starts a fresh window (set during render, so the first paint is already right)
+  const [st, setSt] = useState(() => ({ayahs, focus, win: first()}));
+  if (st.ayahs !== ayahs || st.focus !== focus) setSt({ayahs, focus, win: first()});
+  const [lo, hi] = st.win;
+  const setWin = (w: Win) => setSt(s => (s.win[0] === w[0] && s.win[1] === w[1] ? s : {...s, win: w}));
+
+  // growing upwards adds height above what the reader is looking at: keep the first card where it was (measured after
+  // layout, so browsers that already anchor the scroll — Chrome, Firefox — need no correction and Safari gets one)
+  const anchor = useRef<{el: HTMLElement; top: number} | null>(null);
+  useLayoutEffect(() => {
+    const a = anchor.current; anchor.current = null;
+    if (a && a.el.isConnected) window.scrollBy(0, a.el.getBoundingClientRect().top - a.top);
+  }, [lo]);
+  const grow = (dir: -1 | 1) => {
+    if (dir < 0 && lo > 0){
+      const el = document.querySelector<HTMLElement>('#ayahs article.ayah');
+      if (el) anchor.current = {el, top: el.getBoundingClientRect().top};
+      setWin([Math.max(0, lo - BATCH), hi]);
+    }
+    if (dir > 0 && hi < ayahs.length) setWin([lo, Math.min(ayahs.length, hi + BATCH)]);
+  };
+  // sentinels at both ends: a fresh observer per window reports at once, so short batches keep growing until the ends are out of reach
+  const topRef = useRef<HTMLDivElement>(null), endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!('IntersectionObserver' in window) || (lo === 0 && hi === ayahs.length)) return;
+    const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) grow(en.target === topRef.current ? -1 : 1); }), {rootMargin: '1200px 0px'});
+    if (topRef.current) io.observe(topRef.current);
+    if (endRef.current) io.observe(endRef.current);
+    return () => io.disconnect();
+  }, [lo, hi, ayahs]); // eslint-disable-line react-hooks/exhaustive-deps
+  // showAyah(): a card near the window extends it; a far one starts a new window there
+  useEffect(() => {
+    const on = (e: Event) => {
+      const i = ayahs.findIndex(x => `${x.s}:${x.a}` === (e as CustomEvent<string>).detail);
+      if (i < 0 || (i >= lo && i < hi)) return;
+      if (i >= lo - BATCH && i < hi + BATCH) setWin([Math.min(lo, i), Math.max(hi, i + 1)]);
+      else setWin([i, Math.min(ayahs.length, i + BATCH)]);
+    };
+    window.addEventListener(SHOW_AYAH_EVENT, on); return () => window.removeEventListener(SHOW_AYAH_EVENT, on);
+  }, [ayahs, lo, hi]);
 
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;
@@ -63,7 +125,7 @@ export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[];
     }), {rootMargin: '-30% 0px -60% 0px'});
     document.querySelectorAll('article.ayah').forEach(el => io.observe(el));
     return () => io.disconnect();
-  }, [ayahs, surahs]);
+  }, [ayahs, surahs, lo, hi]);
 
   useEffect(() => {
     if (!focus || mode !== 'surah') { window.scrollTo(0, 0); return; }
@@ -74,18 +136,25 @@ export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[];
   }, [focus, mode, ayahs]);
 
   return (
-    <div id="ayahs" className={meta.ip ? '' : 'no-ip'}>
-      {ayahs.map((ay, i) => (
-        <Fragment key={ay.s + ':' + ay.a}>
-          {mode === 'juz' && (i === 0 || ayahs[i - 1].s !== ay.s) && <>
-            <div className="mb-2.5 mt-[22px] flex items-center justify-between rounded-xl bg-[linear-gradient(90deg,var(--brandSoft),transparent)] px-3.5 py-2.5 font-semibold text-brand">
-              <Link href={`/surah/${ay.s}`}>{ay.s}. {ay.sname}</Link><span className="text-[22px]"><SurahName n={ay.s} prefix /></span>
-            </div>
-            {ay.a === 1 && ay.s !== 1 && ay.s !== 9 && <div className="bism">{meta.bism}</div>}
-          </>}
-          <AyahCard ay={ay} meta={meta} />
-        </Fragment>
-      ))}
-    </div>
+    <>
+      <PlainText items={ayahs.slice(0, lo)} />
+      <div ref={topRef} aria-hidden />
+      <div id="ayahs" className={meta.ip ? '' : 'no-ip'}>
+        {ayahs.slice(lo, hi).map((ay, j) => { const i = lo + j; return (
+          <Fragment key={ay.s + ':' + ay.a}>
+            {mode === 'juz' && (i === 0 || ayahs[i - 1].s !== ay.s) && <>
+              <div className="mb-2.5 mt-[22px] flex items-center justify-between rounded-xl bg-[linear-gradient(90deg,var(--brandSoft),transparent)] px-3.5 py-2.5 font-semibold text-brand">
+                <Link href={`/surah/${ay.s}`}>{ay.s}. {ay.sname}</Link><span className="text-[22px]"><SurahName n={ay.s} prefix /></span>
+              </div>
+              {ay.a === 1 && ay.s !== 1 && ay.s !== 9 && <div className="bism">{meta.bism}</div>}
+            </>}
+            <AyahCard ay={ay} meta={meta} />
+          </Fragment>
+        ); })}
+      </div>
+      <div ref={endRef} aria-hidden />
+      {hi < ayahs.length && <div className="grid place-items-center py-6"><div className="spin" /></div>}
+      <PlainText items={ayahs.slice(hi)} />
+    </>
   );
 }

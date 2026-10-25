@@ -1,5 +1,6 @@
 'use client';
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {showAyah} from './show-ayah';
 import {usePathname} from 'next/navigation';
 import {useApp} from './AppProvider';
 import {audioUrl, RECITERS} from '@/lib/meta';
@@ -47,7 +48,8 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
     el.defaultPlaybackRate = el.playbackRate = sRef.current.speed || 1;
     el.play().catch(e => { if ((e as Error).name !== 'AbortError') toast('Could not play audio'); });
     preloadAfter(key);
-    if (sRef.current.autoScroll) document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'center', behavior: 'smooth'});
+    // long surahs render in batches: showAyah() renders the card first if it isn't on the page yet
+    if (sRef.current.autoScroll) showAyah(key).then(el => el?.scrollIntoView({block: 'center', behavior: 'smooth'}));
   }, [toast]);
   const stop = useCallback(() => {
     const el = audio.current; if (el){ el.pause(); el.removeAttribute('src'); el.load(); }
