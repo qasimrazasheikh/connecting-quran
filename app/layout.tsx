@@ -35,8 +35,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {width: 'device-width', initialScale: 1, themeColor: '#1b1d5e'};
 
 
-// First visit / reload: hide the boot screen once the page, its scripts and the fonts it uses have loaded (12 s at most)
-const BOOT_JS = `(function(){var d=document.documentElement,f=function(){d.classList.add('booted')},t=setTimeout(f,12000);
+// First visit / reload: hide the boot screen once the page, its scripts and the fonts it uses have loaded (12 s at most).
+// Also notes the time of each Back/Forward before Next's router can hear it (Next re-renders inside its own popstate
+// handler, so a listener added later runs too late): AyahList uses it to return a long surah to where the reader was.
+const BOOT_JS = `addEventListener('popstate',function(){window.__noorPopAt=Date.now()});
+(function(){var d=document.documentElement,f=function(){d.classList.add('booted')},t=setTimeout(f,12000);
 new Promise(function(r){document.readyState==='complete'?r():addEventListener('load',r)})
 .then(function(){return document.fonts&&document.fonts.ready}).then(function(){clearTimeout(t);f()},f)})()`;
 

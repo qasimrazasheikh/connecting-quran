@@ -52,6 +52,23 @@ function AyahCard({ay, meta}: {ay: AyahView; meta: ViewMeta}) {
 const ALL_UNDER = 40, BATCH = 20;
 type Win = [number, number]; // rendered ayahs: indexes lo (inclusive) to hi (exclusive)
 
+/**
+ * Back/Forward to a long list returns to the ayah the reader was on: only one batch renders on arrival, so the browser's
+ * own scroll restore can't reach it. Where they were is kept per address for this tab (sessionStorage).
+ */
+const POS = 'noor.pos:';
+type Pos = {key: string; off: number}; // the first card on screen, and its distance from the top of the window
+let docLoad = true;
+// set by the layout's boot script on every Back/Forward, before Next's router renders the page we come back to
+type W = {__noorPopAt?: number};
+/** Was this list reached by Back/Forward: in-app (a popstate just now), or a full page load of that kind (first list only)? */
+function cameBack(){
+  const load = docLoad && (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type === 'back_forward';
+  docLoad = false;
+  return load || Date.now() - ((window as W).__noorPopAt || 0) < 3000;
+}
+const readPos = (path: string): Pos | null => { try{ return JSON.parse(sessionStorage.getItem(POS + path) || 'null'); }catch{ return null; } };
+
 /** The plain text of ayahs not rendered yet, so search engines and screen readers still get the whole surah. */
 const PlainText = ({items}: {items: AyahView[]}) => items.length ? (
   <div className="sr-only">{items.map(ay => <div key={ay.s + ':' + ay.a}>
@@ -127,7 +144,30 @@ export default function AyahList({ayahs, meta, mode, focus}: {ayahs: AyahView[];
     return () => io.disconnect();
   }, [ayahs, surahs, lo, hi]);
 
+  // remember the first card on screen while reading (short lists render whole, so the browser restores those itself)
   useEffect(() => {
+    if (ayahs.length <= ALL_UNDER) return;
+    let t: ReturnType<typeof setTimeout>;
+    const save = () => { clearTimeout(t); t = setTimeout(() => {
+      const el = [...document.querySelectorAll<HTMLElement>('#ayahs article.ayah')].find(a => a.getBoundingClientRect().bottom > 80);
+      if (el) try{ sessionStorage.setItem(POS + location.pathname, JSON.stringify({key: el.dataset.key, off: Math.round(el.getBoundingClientRect().top)})); }catch{ /* storage blocked */ }
+    }, 200); };
+    addEventListener('scroll', save, {passive: true});
+    return () => { clearTimeout(t); removeEventListener('scroll', save); };
+  }, [ayahs]);
+
+  useEffect(() => {
+    // Back/Forward: start the batch at the remembered ayah and put it where it was on screen (again a moment later, in
+    // case the browser's own scroll restore lands after us); the batches above fill in, anchored, as usual
+    const back = cameBack(), pos = back && ayahs.length > ALL_UNDER ? readPos(location.pathname) : null;
+    const pi = pos ? ayahs.findIndex(x => `${x.s}:${x.a}` === pos.key) : -1;
+    if (pos && pi >= 0){
+      setWin([pi, Math.min(ayahs.length, pi + BATCH)]);
+      const place = () => { const el = document.querySelector(`#ayahs [data-key="${pos.key}"]`); if (el) scrollTo(0, el.getBoundingClientRect().top + scrollY - pos.off); return !!el; };
+      let n = 0; const tick = () => { if (!place() && ++n < 30) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); const t = setTimeout(place, 300);
+      return () => clearTimeout(t);
+    }
     if (!focus || mode !== 'surah') { window.scrollTo(0, 0); return; }
     const el = document.getElementById(`a-${ayahs[0]?.s}-${focus}`); if (!el) return;
     el.classList.add('hl'); requestAnimationFrame(() => el.scrollIntoView({block: 'start'}));
