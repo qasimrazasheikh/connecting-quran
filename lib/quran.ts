@@ -204,10 +204,26 @@ export async function getVerseWords(s: number, a: number, lang: string): Promise
   return (d.verse?.words || []).filter(w => w.char_type_name === 'word');
 }
 
-/** Quranic Arabic Corpus morphology (GPL). The file is large, so it is parsed once per server instance. */
+/** Quranic Arabic Corpus morphology (GPL): "s:a:w" -> the word's segments. */
 export type MSeg = {text: string; pos: string; tags: string[]};
+const morphSurah = new Map<number, Promise<Map<string, MSeg[]>>>();
+/**
+ * One surah's grammar. It ships with the site, split per surah (data/morph/<s>.json, from scripts/split-morph.mts), so a
+ * word needs only its own surah's file: no 6.3 MB download and parse on each new server instance. Loaded once per
+ * instance. With MORPH_URL set (the offline tests' mock), the whole file still comes from that address.
+ */
+export function getMorphSurah(s: number): Promise<Map<string, MSeg[]>> {
+  if (process.env.MORPH_URL) return getMorph();
+  if (!Number.isInteger(s) || s < 1 || s > 114) return Promise.reject(new Error('bad surah'));
+  if (!morphSurah.has(s)) morphSurah.set(s, import(`../data/morph/${s}.json`).then(mod => {
+    const d = (mod.default ?? mod) as Record<string, [string, string, string][]>;
+    return new Map(Object.entries(d).map(([aw, segs]) => [`${s}:${aw}`, segs.map(([text, pos, tags]) => ({text, pos, tags: tags.split('|')}))]));
+  }).catch(e => { morphSurah.delete(s); throw e; }));
+  return morphSurah.get(s)!;
+}
+/** The whole corpus file from MORPH_URL, parsed once per server instance (the offline tests' mock). */
 let morphP: Promise<Map<string, MSeg[]>> | null = null;
-export function getMorph(): Promise<Map<string, MSeg[]>> {
+function getMorph(): Promise<Map<string, MSeg[]>> {
   if (!morphP){
     morphP = fetch(API.morph, {cache: 'no-store'}).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }).then(txt => {
       const m = new Map<string, MSeg[]>();

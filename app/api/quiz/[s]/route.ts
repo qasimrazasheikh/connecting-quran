@@ -1,4 +1,4 @@
-import {getMorph, getSurahEditions, getWords, qpcText} from '@/lib/quran';
+import {getMorphSurah, getSurahEditions, getWords, qpcText} from '@/lib/quran';
 import {stripBismillah} from '@/lib/text';
 import {NextResponse, type NextRequest} from 'next/server';
 /** Everything the quiz builder needs for one surah, in a compact form. */
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<'/api/quiz/[s]'>) 
   try{
     const [data, words, morph] = await Promise.all([
       getSurahEditions(n, ['quran-uthmani', trans]),
-      getWords('chapter', n, lang).catch(() => new Map()), getMorph().catch(() => null),
+      getWords('chapter', n, lang).catch(() => new Map()), getMorphSurah(n).catch(() => null),
     ]);
     const uth = qpcText(data[0]); // its Arabic is already quran.com's QPC text when Quran Foundation answered
     const ayahs = data[0].ayahs.map(x => ({a: x.numberInSurah, text: uth?.[`${n}:${x.numberInSurah}`] || stripBismillah(x.text, n, x.numberInSurah)}));

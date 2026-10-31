@@ -20,6 +20,7 @@ npm run db:generate          # after editing lib/db/schema.ts: write a migration
 npm run db:migrate           # apply migrations to DATABASE_URL
 npm run db:seed              # fill the catalogue from the current sources (re-runnable; never overwrites curator edits)
 npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah JSON in data/qul/ (download needs a QUL login; not committed)
+node scripts/split-morph.mts # regenerate data/morph/<s>.json (word grammar, one file per surah) from the corpus file
 ```
 
 Env (`.env.local`, and Vercel project settings): `DATABASE_URL` (Neon), `ADMIN_PASSWORD` (8+ chars), `ADMIN_SECRET`

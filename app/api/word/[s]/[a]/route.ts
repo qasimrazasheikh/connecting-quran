@@ -1,5 +1,5 @@
 import {describeSeg, POS_NAME} from '@/lib/grammar';
-import {getMorph, getVerseWords} from '@/lib/quran';
+import {getMorphSurah, getVerseWords} from '@/lib/quran';
 import {cleanIP, wordCount} from '@/lib/text';
 import {NextResponse, type NextRequest} from 'next/server';
 /** Grammar + meaning for one word. `w` = word number; `t` = token number in Indo-Pak text (mapped to the word number). */
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<'/api/word/[s]/[a]
   let w = +(req.nextUrl.searchParams.get('w') || 0);
   const t = +(req.nextUrl.searchParams.get('t') || 0);
   try{
-    const [en, ur, morph] = await Promise.all([getVerseWords(+s, +a, 'en').catch(() => []), getVerseWords(+s, +a, 'ur').catch(() => []), getMorph()]);
+    const [en, ur, morph] = await Promise.all([getVerseWords(+s, +a, 'en').catch(() => []), getVerseWords(+s, +a, 'ur').catch(() => []), getMorphSurah(+s)]);
     if (!w && t){
       let cum = 0; w = t;
       for (let i = 0; i < en.length; i++){ cum += Math.max(1, wordCount(cleanIP(en[i].text_indopak || ''))); if (t <= cum){ w = i + 1; break; } }
