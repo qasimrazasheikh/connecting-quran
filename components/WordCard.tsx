@@ -33,15 +33,18 @@ export default function WordCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [word]);
 
-  // place next to the word on wide screens (phones get a bottom sheet from CSS)
+  // place next to the word on wide screens (phones get a bottom sheet from CSS). The side is chosen once, when the card
+  // opens: below the word if there's room for the full card, else whichever side has more. The card is pinned to the
+  // word's edge and grows away from it, so it doesn't jump when the grammar arrives and the card gets taller.
   useLayoutEffect(() => {
     const el = box.current; if (!el || !word) return;
-    if (innerWidth <= 760){ el.style.top = ''; el.style.left = ''; return; }
-    const r = word.rect, cw = el.offsetWidth, ch = el.offsetHeight;
-    let top = r.bottom + 8; if (top + ch > innerHeight - 8) top = Math.max(70, r.top - ch - 8);
-    el.style.top = top + 'px';
-    el.style.left = Math.max(8, Math.min(r.left + r.width / 2 - cw / 2, innerWidth - cw - 8)) + 'px';
-  }, [word, info, err]);
+    const s = el.style;
+    if (innerWidth <= 760){ s.top = s.bottom = s.left = s.maxHeight = ''; return; }
+    const r = word.rect, below = innerHeight - r.bottom - 16, above = r.top - 70 - 8; // 70: the sticky header
+    if (below >= 420 || below >= above){ s.top = r.bottom + 8 + 'px'; s.bottom = ''; s.maxHeight = Math.min(below, 560) + 'px'; }
+    else { s.bottom = innerHeight - r.top + 8 + 'px'; s.top = ''; s.maxHeight = Math.min(above, 560) + 'px'; }
+    s.left = Math.max(8, Math.min(r.left + r.width / 2 - el.offsetWidth / 2, innerWidth - el.offsetWidth - 8)) + 'px';
+  }, [word]);
 
   // click outside closes (a click on another word opens that word instead)
   useEffect(() => {
