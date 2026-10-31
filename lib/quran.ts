@@ -1,7 +1,7 @@
 /** Server-side data access. Every external call goes through here and is cached (see REVALIDATE). */
 import {unstable_cache} from 'next/cache';
 import {API, REVALIDATE} from './config';
-import {catalogTafsirs} from './catalog';
+import {catalogTafsirs, linkTafsirs} from './catalog';
 import {nativeName} from './tafsir-names';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
 import {SURAHS} from './surahs';
@@ -240,7 +240,16 @@ function getMorph(): Promise<Map<string, MSeg[]>> {
 }
 
 /** The curated catalogue's approved tafseers; without a database, the API's list minus known-broken editions. */
+/**
+ * Every tafseer the Study panel offers: our own sources, then the ones read from other sites' ayah pages. A work in
+ * both (same language and name, e.g. Ibn Kathir) keeps only our copy, which loads faster.
+ */
 export async function getTafsirEditions(): Promise<TafsirEdition[]> {
+  const [own, links] = await Promise.all([ownTafsirEditions(), linkTafsirs()]);
+  const has = new Set(own.map(e => e.language_name.toLowerCase() + '|' + e.name));
+  return [...own, ...links.filter(e => !has.has(e.language_name.toLowerCase() + '|' + e.name))];
+}
+async function ownTafsirEditions(): Promise<TafsirEdition[]> {
   const cat = await catalogTafsirs();
   if (cat?.length) return cat;
   let list: TafsirEdition[];

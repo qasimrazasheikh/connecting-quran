@@ -4,11 +4,11 @@ import {useApp} from './AppProvider';
 import {Icon} from './Icons';
 import Link from 'next/link';
 import {getEditions, getQoh, getRelated, getStudy, getTafsir, type QohTafsir, type Study} from '@/lib/client-data';
-import type {RelatedItem, StudyLink, VideoCard} from '@/lib/catalog';
-import {tafsirTwin, type TafsirEdition} from '@/lib/meta';
+import type {RelatedItem, VideoCard} from '@/lib/catalog';
+import {isQoh, tafsirTwin, type TafsirEdition} from '@/lib/meta';
 import type {StudyTab} from '@/lib/step';
 import {tafsirHtml} from '@/lib/tafsir-client';
-import {abtn, btnYt, cx, empty, natCls, segBtn, segWrap, sel} from '@/lib/ui';
+import {abtn, btnYt, cx, empty, natCls, segBtn, segWrap} from '@/lib/ui';
 
 /* Kept while moving between ayahs: which section is open (at most one, so the page stays short). */
 const accOpen = new Set<string>();
@@ -16,8 +16,17 @@ let accInit = false;
 
 type Status = Record<string, 'none' | 'error' | 'ok'>;
 
+/** One tafseer at an ayah; one read from another site's page credits that page. */
+function TafsirText({slug, meta, s, a}: {slug: string; meta?: TafsirEdition; s: number; a: number}) {
+  if (!meta?.url) return <OwnText slug={slug} meta={meta} s={s} a={a} />;
+  const url = meta.url.replace('{s}', String(s)).replace('{a}', String(a));
+  return <>
+    {isQoh(url) ? <QohTafsirs s={s} a={a} /> : <OwnText slug={slug} meta={meta} s={s} a={a} />}
+    <p className="mt-1.5 text-[12px] text-muted">Source: <a href={url} target="_blank" rel="noopener">{meta.site} ↗</a></p>
+  </>;
+}
 /** Loads one tafseer's text for an ayah and shows it (or a "no note" message). */
-function TafsirText({slug, meta, language, s, a}: {slug: string; meta?: TafsirEdition; language?: string; s: number; a: number}) {
+function OwnText({slug, meta, language, s, a}: {slug: string; meta?: TafsirEdition; language?: string; s: number; a: number}) {
   const [html, setHtml] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [tick, setTick] = useState(0);
@@ -61,15 +70,16 @@ function useTafsirList(s: number, a: number, lang: TLang) {
   const picks = useMemo(() => settings.tafsirs.filter(x => langEds.some(e => e.slug === x)), [settings.tafsirs, langEds]);
   const list = useMemo(() => [...picks, ...langEds.map(e => e.slug).filter(x => !picks.includes(x))], [picks, langEds]);
   const key = picks.join(',');
+  const meta = (slug: string) => eds?.find(e => e.slug === slug);
   // check in the background which picks have a note for this ayah (also warms the cache)
   useEffect(() => {
     let live = true; setStatus({});
-    key.split(',').filter(Boolean).forEach(slug => getTafsir(slug, s, a)
+    key.split(',').filter(Boolean).forEach(slug => (isQoh(meta(slug)?.url || '') ? getQoh(s, a).then(v => v.length ? 'x' : '') : getTafsir(slug, s, a))
       .then(t => { if (live) setStatus(st => ({...st, [slug]: t.trim() ? 'ok' : 'none'})); })
       .catch(() => { if (live) setStatus(st => ({...st, [slug]: 'error'})); }));
     return () => { live = false; };
-  }, [key, s, a]);
-  const meta = (slug: string) => eds?.find(e => e.slug === slug);
+  }, [key, s, a]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return {eds, err, list, picks, status, meta};
 }
 /** Author (in its own script and font). */
@@ -81,7 +91,7 @@ const Others = ({n, lang}: {n: number; lang: TLang}) => <div className="mb-2 mt-
 /** Ayah stepping supplied by the Tafseer page; `compact` is the phone version, beside the layout switch. */
 type Nav = (compact: boolean) => ReactNode;
 
-function Accordion({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLang; more: number; onMore: () => void; nav?: Nav}) {
+function Accordion({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav}) {
   const {openSettings, update} = useApp();
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
   const [open, setOpen] = useState<Set<string>>(() => new Set(accOpen));
@@ -96,7 +106,6 @@ function Accordion({s, a, lang, more, onMore, nav}: {s: number; a: number; lang:
     <div>
       <div className="mb-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted">
         <span>{list.length} {langText(lang)} tafseer{list.length > 1 ? 's' : ''}{picks.length ? ` · ${picks.length} in your list` : ''} · ayah {s}:{a}</span><span className="flex-1" />
-        {more > 0 && <button className={abtn} onClick={onMore} title="More tafseers on other sites"><Icon.link />More tafseers</button>}
         <button className={abtn} data-acc="collapse" onClick={() => { accOpen.clear(); setOpen(new Set()); }}>Collapse all</button>
         <button className={abtn} data-acc="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         <button className={abtn} data-acc="layout" title="Switch to list + reader layout" onClick={() => update({tafLayout: 'split'})}><Icon.book />List view</button>
@@ -118,15 +127,11 @@ function Accordion({s, a, lang, more, onMore, nav}: {s: number; a: number; lang:
           </Fragment>
         );
       })}
-      {more > 0 && <button className="mb-2 mt-1 block w-full rounded-xl border border-dashed border-line bg-surface px-3.5 py-3 text-left text-ink hover:border-brand" onClick={onMore}>
-        <b className="block text-[15px]">{more} more {langText(lang)} tafseers on other sites →</b>
-        <small className="text-[12.5px] text-muted">Each opened at ayah {s}:{a}</small>
-      </button>}
     </div>
   );
 }
 
-function Split({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLang; more: number; onMore: () => void; nav?: Nav}) {
+function Split({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav}) {
   const {settings, update, openSettings} = useApp();
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
   const cur = list.includes(settings.tafLast) ? settings.tafLast : list[0];
@@ -141,7 +146,6 @@ function Split({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLa
     <div>
       <div className="mb-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted">
         <span>{list.length} {langText(lang)} tafseer{list.length > 1 ? 's' : ''}{picks.length ? ` · ${picks.length} in your list` : ''} · ayah {s}:{a}</span><span className="flex-1" />
-        {more > 0 && <button className={abtn} onClick={onMore} title="More tafseers on other sites"><Icon.link />More tafseers</button>}
         <button className={abtn} data-ts="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         <button className={abtn} data-ts="layout" title="Switch to accordion layout" onClick={() => update({tafLayout: 'accordion'})}><Icon.chev />Accordion view</button>
         {nav && <span className="flex gap-1 sm:hidden">{nav(true)}</span>}
@@ -163,7 +167,6 @@ function Split({s, a, lang, more, onMore, nav}: {s: number; a: number; lang: TLa
                 </Fragment>
               );
             })}
-            {more > 0 && <button className={cx(item, 'border-dashed border-line bg-surface hover:border-brand')} onClick={onMore}><b className="text-sm">{more} more →</b><small className="text-xs text-muted">on other sites</small></button>}
           </nav>
           {/* no heading: the highlighted item in the list already names the tafseer and its author */}
           <section ref={readerRef} role="tabpanel" aria-label={m?.name} className="min-w-0 rounded-xl border border-line bg-surface @[620px]:flex-1">
@@ -208,12 +211,8 @@ export function VideoCards({videos, sname}: {videos: VideoCard[] | null; sname: 
   );
 }
 
-/** Sites whose text our server pulls from their ayah page (no API), shown here like our own tafseers; others open in a new tab. */
-const isEql = (url: string) => url.startsWith('https://equranlibrary.com/');
-const isQoh = (url: string) => url.startsWith('https://quranohadith.com/');
-const embeds = (url: string) => isEql(url) || isQoh(url);
-/* The open tafseer (and, on QuranoHadith, the open work) stay open while the reader steps between ayahs. */
-let moreOpen = '', qohOpen: string | null = null;
+/* QuranoHadith's open work stays open while the reader steps between ayahs. */
+let qohOpen: string | null = null;
 
 /** QuranoHadith's page holds several tafseers for the ayah: one collapsible section each, like the Tafseer tab. */
 function QohTafsirs({s, a}: {s: number; a: number}) {
@@ -244,57 +243,6 @@ function QohTafsirs({s, a}: {s: number; a: number}) {
             {isOpen && <div className="border-t border-line px-4 py-3.5"><div className="tafsir urdu rtl" dangerouslySetInnerHTML={{__html: tafsirHtml(x.text, 'urdu')}} /></div>}
           </section>);
       })}
-    </div>
-  );
-}
-
-/** A tafseer from another site at this ayah, with a bar back to the list and a credit to the site. */
-function EmbeddedTafseer({link, s, a, onBack}: {link: StudyLink; s: number; a: number; onBack: () => void}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <button className={abtn} onClick={onBack}>← All tafseers</button>
-        <b className={cx('min-w-0 flex-1 truncate text-[14.5px]', natCls(link.name))} dir="auto">{link.name}</b>
-        <a className={cx(abtn, 'flex-none')} href={link.url} target="_blank" rel="noopener" title={`Open on ${link.site} in a new tab`}>Open in new tab ↗</a>
-      </div>
-      {isQoh(link.url) ? <QohTafsirs s={s} a={a} /> : <TafsirText slug={link.id} language={link.lang} s={s} a={a} />}
-      <p className="mt-1.5 text-[12px] text-muted">Source: <a href={link.url} target="_blank" rel="noopener">{link.site}</a></p>
-    </div>
-  );
-}
-
-/** Tafseers in the chosen language that live on other sites, each opened at this ayah, with a filter for long lists. */
-function MoreTafseers({links, lang, s, a}: {links: StudyLink[] | null; lang: TLang; s: number; a: number}) {
-  const [q, setQ] = useState('');
-  const [open, setOpenState] = useState(moreOpen);
-  const setOpen = (id: string) => { moreOpen = id; setOpenState(id); };
-  if (!links) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
-  if (!links.length) return <div className={empty}>No {langText(lang)} tafseers on other sites yet.</div>;
-  const cur = links.find(l => l.id === open && embeds(l.url));
-  if (cur) return <EmbeddedTafseer link={cur} s={s} a={a} onBack={() => setOpen('')} />;
-  const qq = q.trim().toLowerCase();
-  // the id (source slug) keeps English spellings like "tafheem" finding works named in Urdu
-  const shown = links.filter(l => !qq || `${l.name} ${l.author} ${l.site} ${l.id}`.toLowerCase().includes(qq));
-  return (
-    <div className="@container">
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
-        <span>{links.length} {langText(lang)} tafseer{links.length === 1 ? '' : 's'} on other sites · each opens at ayah {s}:{a}</span><span className="flex-1" />
-        {links.length > 8 && <input className={cx(sel, 'w-full sm:w-56')} type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Filter by name or scholar…" aria-label="Filter tafseers" />}
-      </div>
-      {!shown.length && <div className={empty}>Nothing matches “{q}”.</div>}
-      {/* two columns only when the panel itself is wide (full page), not in the narrow drawer */}
-      <div className="grid gap-2 @[640px]:grid-cols-2">
-        {shown.map(l => {
-          const inner = <>
-            <span className="min-w-0 flex-1"><b className={cx('block truncate text-[14.5px]', natCls(l.name))}>{l.name}</b><small className={cx('block truncate text-[12.5px] text-muted', natCls(l.author))}>{l.author}</small></span>
-            <span className="flex-none text-[12px] text-muted">{l.site}{embeds(l.url) ? '' : ' ↗'}</span></>;
-          const cls = 'flex min-w-0 items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-left text-ink no-underline hover:border-brand';
-          // a real link too, so ctrl/middle-click still opens a new tab
-          return embeds(l.url)
-            ? <a key={l.id} className={cls} href={l.url} data-embed onClick={e => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); setOpen(l.id); }}>{inner}</a>
-            : <a key={l.id} className={cls} href={l.url} target="_blank" rel="noopener">{inner}</a>;
-        })}
-      </div>
     </div>
   );
 }
@@ -333,7 +281,7 @@ function RelatedAyahs({s, a, count}: {s: number; a: number; count?: number}) {
   );
 }
 
-/** Study panel for one ayah (drawer and tafseer page): tafseer text, more tafseers on other sites, video lectures. */
+/** Study panel for one ayah (drawer and tafseer page): tafseer text, video lectures, related ayahs. */
 export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: number; tab?: StudyTab; onTab?: (t: StudyTab) => void; nav?: Nav}) {
   const {settings, update, surahs, tafTab: ctxTab, setTafTab} = useApp();
   const tafTab = tab ?? ctxTab;
@@ -346,11 +294,7 @@ export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: num
   const [firstLang, setFirstLang] = useState<TLang>('ur');
   useEffect(() => { getEditions().then(d => { const n = d.tafsir.find(e => e.slug === settings.tafsirs[0])?.language_name.toLowerCase(); const l = TLANGS.find(x => x[2] === n); if (l) setFirstLang(l[0]); }, () => {}); }, [settings.tafsirs]);
   const lang: TLang = settings.tafLang || firstLang;
-  const links = study ? study.links.filter(l => l.lang === langText(lang)) : null;
-  useEffect(() => { let live = true; setStudy(null); getStudy(s, a).then(d => { if (live) setStudy(d); }, () => { if (live) setStudy({links: [], videos: [], related: 0}); }); return () => { live = false; }; }, [s, a]);
-  // "More tafseers" is empty for some languages (Arabic): switching to one goes back to the Tafseer tab
-  const noMore = tafTab === 'more' && links !== null && !links.length;
-  useEffect(() => { if (noMore) pick('text'); }, [noMore]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let live = true; setStudy(null); getStudy(s, a).then(d => { if (live) setStudy(d); }, () => { if (live) setStudy({videos: [], related: 0}); }); return () => { live = false; }; }, [s, a]);
   return (
     <div>
       <div className="mb-2.5 flex items-center gap-2">
@@ -362,15 +306,13 @@ export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: num
       </div>
       <div className="mb-3 flex overflow-x-auto border-b border-line [scrollbar-width:none] sm:gap-1">
         <button data-tab="text" className={tabBtn(tafTab === 'text')} onClick={() => pick('text')}><Icon.book className="max-sm:hidden" /> Tafseer</button>
-        <button data-tab="more" className={tabBtn(tafTab === 'more')} onClick={() => pick('more')}><Icon.link className="max-sm:hidden" /> <span className="max-sm:hidden">More tafseers</span><span className="sm:hidden">More</span> {count(links?.length)}</button>
         <button data-tab="videos" className={tabBtn(tafTab === 'videos')} onClick={() => pick('videos')}><Icon.yt className="max-sm:hidden" /> <span className="max-sm:hidden">Video lectures</span><span className="sm:hidden">Videos</span> {count(study?.videos.length)}</button>
         <button data-tab="related" className={tabBtn(tafTab === 'related')} onClick={() => pick('related')}><Icon.repeat className="max-sm:hidden" /> Related {count(study?.related)}</button>
       </div>
       {nav && tafTab !== 'text' && <div className="mb-2 flex justify-end gap-1 sm:hidden">{nav(true)}</div>}
       {tafTab === 'videos' ? <VideoCards videos={study?.videos ?? null} sname={sname} />
-        : tafTab === 'more' ? <MoreTafseers links={links} lang={lang} s={s} a={a} />
         : tafTab === 'related' ? <RelatedAyahs s={s} a={a} count={study?.related} />
-        : settings.tafLayout === 'split' ? <Split s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} nav={nav} /> : <Accordion s={s} a={a} lang={lang} more={links?.length ?? 0} onMore={() => pick('more')} nav={nav} />}
+        : settings.tafLayout === 'split' ? <Split s={s} a={a} lang={lang} nav={nav} /> : <Accordion s={s} a={a} lang={lang} nav={nav} />}
     </div>
   );
 }

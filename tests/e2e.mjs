@@ -42,8 +42,8 @@ await p.click('#a-2-3 [data-act=tafsir]'); await p.waitForSelector('#tafDrawer .
 const th = await p.locator('#tafDrawer .tafsir').first().innerHTML();
 ok(!/script|onclick/.test(th), 'tafseer html sanitised', th.slice(0, 80));
 const names = await p.locator('#tafDrawer section.acc b').allInnerTexts();
-ok(names.length === 3 && ['تفسیر ابن کثیر', 'بیان القرآن', 'احسن البیان'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'التفسير الميسر'].includes(n)), 'accordion sections (Urdu by default, in Urdu script)', names.join(' | '));
-ok(await p.locator('#tafDrawer section.acc b.nat-ur').count() === 3, 'Urdu names drawn in the Urdu font');
+ok(names.length === 4 && ['تفسیر ابن کثیر', 'بیان القرآن', 'احسن البیان', 'مزید اردو تفاسیر'].every(n => names.includes(n)) && !names.some(n => ['Broken dup', 'Ibn Kathir', 'Maarif', 'التفسير الميسر'].includes(n)), 'accordion sections (Urdu by default, in Urdu script, QuranoHadith last)', names.join(' | '));
+ok(await p.locator('#tafDrawer section.acc b.nat-ur').count() === 4, 'Urdu names drawn in the Urdu font');
 await p.locator('#tafDrawer section.acc button[aria-expanded]').nth(1).click(); await p.waitForTimeout(500);
 ok(await p.locator('#tafDrawer section.acc [aria-expanded=true]').count() === 1 && await p.locator('#tafDrawer section.acc').nth(1).locator('[aria-expanded=true]').count() === 1, 'opening a tafseer closes the open one');
 await p.locator('#tafDrawer section.acc button[aria-expanded]').nth(0).click(); await p.waitForSelector('#tafDrawer .tafsir');
@@ -136,15 +136,17 @@ ok(true, 'videos tab changes URL');
 await shot('videos-page');
 await go('/tafseer'); await p.waitForURL('**/tafseer/1/1'); ok(true, '/tafseer redirects');
 
-console.log('# more tafseers (QuranoHadith text in the app)');
-await go('/tafseer/112/2?tab=more'); await p.click('[data-lang=ur]'); await p.click('a[data-embed]'); await p.waitForSelector('.tafsir.urdu');
-const qohNames = (await p.locator('section.acc button b').allInnerTexts()).join(' | ');
+console.log('# other-site tafseers in the main list (QuranoHadith)');
+await go('/tafseer/112/2?tab=more'); await p.click('[data-lang=ur]'); await p.waitForSelector('section.acc[data-slug=qoh]');
+ok(await p.locator('[data-tab=more]').count() === 0 && !(await p.locator('main').innerText()).includes('on other sites'), 'no "More tafseers" tab or card; old ?tab=more opens the tafseers');
+await p.click('section.acc[data-slug=qoh] > button'); await p.waitForSelector('section.acc[data-slug=qoh] .tafsir.urdu');
+const qohNames = (await p.locator('section.acc[data-slug=qoh] section.acc button b').allInnerTexts()).join(' | ');
 ok(qohNames === 'احسن البیان | معارف القرآن', 'works with notes, Urdu names, no empty or Ibn Abbas', qohNames);
-ok(await p.locator('.tafsir.urdu p').count() === 2 && p.url().endsWith('/tafseer/112/2?tab=more'), 'first work open, reader stays on the page');
-await p.click('text=← All tafseers');
-await p.click('[data-lang=ar]'); await p.waitForURL(u => !u.search.includes('tab=more'), {timeout: 5000}).catch(() => {});
-ok(!p.url().includes('tab=more') && await p.locator('section.acc').count() > 0, 'Arabic has no "more tafseers": back to the Tafseer tab');
-await p.click('[data-lang=ur]');
+ok(await p.locator('section.acc[data-slug=qoh] .tafsir.urdu p').count() === 2 && p.url().includes('/tafseer/112/2'), 'first work open, reader stays on the page');
+ok(await p.locator('section.acc[data-slug=qoh] a[href="https://quranohadith.com/alquran-tafseer/112/2"]').count() === 1, 'credits the source page');
+await p.click('[data-acc=layout]'); await p.waitForSelector('.titem[data-slug=qoh]'); await p.click('.titem[data-slug=qoh]');
+await p.waitForSelector('[role=tabpanel] .tafsir.urdu'); ok(true, 'list view shows it too');
+await p.click('[data-ts=layout]'); await p.waitForSelector('section.acc');
 
 console.log('# translate bar');
 await go('/tafseer/2/5'); await p.waitForSelector('section.acc');

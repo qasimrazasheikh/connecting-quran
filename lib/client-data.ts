@@ -2,7 +2,7 @@
 /* Browser-side calls to this site's own API routes, with a small in-memory cache. */
 import type {TafsirEdition, TransEdition} from './meta';
 import type {SegInfo} from './grammar';
-import type {RelatedItem, StudyLink, VideoCard} from './catalog';
+import type {RelatedItem, VideoCard} from './catalog';
 
 const cache = new Map<string, Promise<unknown>>();
 async function getJSON<T>(url: string): Promise<T> {
@@ -21,7 +21,7 @@ export const getEditions = () => getJSON<{trans: TransEdition[]; tafsir: TafsirE
 export const getTafsir = (slug: string, s: number, a: number) => getJSON<{text: string}>(`/api/tafsir/${encodeURIComponent(slug)}/${s}/${a}`).then(d => d.text || '');
 export type QohTafsir = {name: string; author: string; text: string};
 export const getQoh = (s: number, a: number) => getJSON<{items: QohTafsir[]}>(`/api/qoh/${s}/${a}`).then(d => d.items);
-export type Study ={links: StudyLink[]; videos: VideoCard[]; related: number};
+export type Study = {videos: VideoCard[]; related: number};
 export const getRelated = (s: number, a: number, ip: boolean) => getJSON<{items: RelatedItem[]}>(`/api/related/${s}/${a}${ip ? '?script=ip' : ''}`).then(d => d.items);
 export const getStudy = (s: number, a: number) => getJSON<Study>(`/api/study/${s}/${a}`);
 export type WordInfo = {w: number; translit: string; meanEn: string; meanUr: string; type: string; root: string; lemma: string; segs: SegInfo[]};

@@ -44,6 +44,8 @@ export const VIDEO_SOURCES = [
   {id:'nak', name:'Nouman Ali Khan', initials:'NAK', lang:'English', desc:'Linguistic and thematic tafseer', url: (surah: string) => yt(`Nouman Ali Khan Surah ${surah}`)},
 ];
 export const qohUrl = (s: number, a: number) => `https://quranohadith.com/alquran-tafseer/${s}/${a}`;
+/** QuranoHadith without a database: the one other-site tafseer the built-in lists carry. */
+export const QOH_EDITION: TafsirEdition = {slug: 'qoh', name: 'مزید اردو تفاسیر', language_name: 'urdu', author_name: 'QuranoHadith.com', site: 'QuranoHadith', url: 'https://quranohadith.com/alquran-tafseer/{s}/{a}'};
 export const googleTranslateUrl = (t: string, l: string) => `https://translate.google.com/?sl=ar&tl=${l}&text=${encodeURIComponent(t)}&op=translate`;
 
 export const TJ_RULES: [string, string, string][] = [['h','Hamzat al-wasl (silent)','همزة الوصل'],['l','Lām shamsiyyah (silent)','لام شمسية'],['s','Silent letter','حرف ساكت'],['n','Madd — 2 counts','مد طبيعي'],['p','Madd — 2, 4 or 6 counts','مد جائز'],['o','Madd — 4–5 counts','مد واجب'],['m','Madd — 6 counts','مد لازم'],['q','Qalqalah','قلقلة'],['g','Ghunnah','غنة'],['f','Ikhfāʾ','إخفاء'],['c','Ikhfāʾ shafawī','إخفاء شفوي'],['i','Iqlāb','إقلاب'],['a','Idghām with ghunnah','إدغام بغنة'],['u','Idghām without ghunnah','إدغام بلا غنة'],['w','Idghām shafawī','إدغام شفوي'],['d','Idghām mutajānisayn','إدغام متجانسين'],['b','Idghām mutaqāribayn','إدغام متقاربين']];
@@ -62,7 +64,11 @@ export const FALLBACK_TRANS: TransEdition[] = [
   {identifier:'en.maududi',language:'en',englishName:'Maududi',direction:'ltr'},
   {identifier:'en.asad',language:'en',englishName:'Muhammad Asad',direction:'ltr'},
 ];
-export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string};
+/** `site`/`url` mark a tafseer whose text our server pulls from another site's ayah page (url: pattern with {s}, {a}). */
+export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string; site?: string; url?: string};
+/** Sites whose ayah pages we can read (no API); QuranoHadith's page holds several works for the ayah. */
+export const isEql = (url: string) => url.startsWith('https://equranlibrary.com/');
+export const isQoh = (url: string) => url.startsWith('https://quranohadith.com/');
 export const QE_SLUG = 'qe-urdu-junagarhi';
 /** QuranEnc's Urdu Junagarhi translation; its notes are Ahsan-ul-Bayan (Hafiz Salahuddin Yusuf). */
 export const QE_EDITION: TafsirEdition = {slug: QE_SLUG, name: 'احسن البیان', language_name: 'urdu', author_name: 'حافظ صلاح الدین یوسف (ترجمہ: محمد جوناگڑھی)'};

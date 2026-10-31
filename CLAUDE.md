@@ -46,7 +46,7 @@ new external call, add a matching mock route there or the e2e run will break.
 ## Layout
 
 - `app/` — one folder per URL (`/surah/[n]/[[...ayah]]`, `/juz/[j]`, `/mushaf/[[...p]]`, `/tafseer/[s]`, `/videos/[s]`,
-  `/search`, `/quiz/[s]`, `/bookmarks`) plus browser-facing API routes in `app/api/` (`editions`, `tafsir/[slug]/[s]/[a]` (an `eql-*` slug = the note pulled from that approved eQuranLibrary link's page), `qoh/[s]/[a]` (QuranoHadith's page split per work),
+  `/search`, `/quiz/[s]`, `/bookmarks`) plus browser-facing API routes in `app/api/` (`editions`, `tafsir/[slug]/[s]/[a]` (an `eql-*` slug = the note pulled from that approved eQuranLibrary link's page; approved eQuranLibrary/QuranoHadith link sources are listed with the tafseers, `linkTafsirs()`, minus works we already carry under the same name), `qoh/[s]/[a]` (QuranoHadith's page split per work),
   `word/[s]/[a]`, `search`, `quiz/[s]`, `study/[s]/[a]` = links + videos + related count for the Study panel, `related/[s]/[a]` = related ayahs with shared words marked) that proxy the external sources through `lib/quran.ts`.
 - `components/` — almost all are client components. `AppProvider` owns settings, bookmarks, toasts and the open
   drawers/panels (settings, tafseer, word card); `PlayerProvider` owns the audio player. Both are mounted in `app/layout.tsx`.
@@ -60,7 +60,7 @@ new external call, add a matching mock route there or the e2e run will break.
     values (`enums.ts`, safe to import in client code).
   - `catalog.ts` — **server only**. Reads approved catalogue rows (60 s in-memory cache, cleared by admin actions);
     returns null without a database so callers fall back to the built-in lists in `meta.ts`.
-  - `step.ts` also defines the Study panel tabs (`StudyTab`, `studyHref`): text, more and related live on `/tafseer/s/a[?tab=…]`, videos on `/videos/s/a`.
+  - `step.ts` also defines the Study panel tabs (`StudyTab`, `studyHref`): text and related live on `/tafseer/s/a[?tab=…]`, videos on `/videos/s/a`.
   - `admin-auth.ts` — curator session (signed httpOnly cookie on `/admin`, signature includes the password).
   - `config.ts` — external API base URLs (each overridable by env var, see `.env.example`) and `REVALIDATE` (24 h).
   - `quran.ts` — **server only**. Every external fetch goes through `getJSON` here and is cached with `next.revalidate`.

@@ -5,7 +5,7 @@
 import 'server-only';
 import {and, asc, desc, eq, gte, isNull, lte, or} from 'drizzle-orm';
 import {db, schema} from './db';
-import {qohUrl, VIDEO_SOURCES, type TafsirEdition} from './meta';
+import {isEql, isQoh, QOH_EDITION, qohUrl, VIDEO_SOURCES, type TafsirEdition} from './meta';
 
 const {sources, entries, relatedAyahs} = schema;
 const TTL = 60_000;
@@ -76,8 +76,8 @@ export type StudyLink = {id: string; name: string; author: string; lang: string;
 const siteOf = (src: {description: string; homepage: string}) => src.description || (src.homepage ? new URL(src.homepage).hostname.replace(/^www\./, '') : '');
 
 /**
- * "More tafseers": approved link sources opened at this ayah (e.g. a tafseer on eQuranLibrary), plus single links the
- * curator attached to this ayah, in the curator's order.
+ * Approved link sources opened at this ayah (e.g. a tafseer on eQuranLibrary), plus single links the curator attached
+ * to this ayah, in the curator's order. The tafseer routes read only the URLs given here.
  */
 export async function studyLinks(s: number, a: number): Promise<StudyLink[]> {
   const res = await cached(`links:${s}:${a}`, async () => {
@@ -88,7 +88,7 @@ export async function studyLinks(s: number, a: number): Promise<StudyLink[]> {
     ]);
     return {srcs, ents};
   });
-  if (!res) return [{id: 'qoh', name: 'More Urdu tafaseer', author: 'QuranoHadith.com', lang: 'Urdu', site: 'QuranoHadith', url: qohUrl(s, a)}];
+  if (!res) return [{id: 'qoh', name: QOH_EDITION.name, author: 'QuranoHadith.com', lang: 'Urdu', site: 'QuranoHadith', url: qohUrl(s, a)}];
   const out: StudyLink[] = [];
   res.srcs.forEach(src => {
     const one = (id: string, name: string, url: string) => out.push({id, name, author: src.author, lang: LANG_LABEL[src.lang], site: siteOf(src), url});
@@ -96,6 +96,17 @@ export async function studyLinks(s: number, a: number): Promise<StudyLink[]> {
     res.ents.filter(e => e.sourceId === src.id && e.url).forEach(e => one(`${src.slug}-${e.id}`, e.title || src.name, e.url));
   });
   return out;
+}
+
+/**
+ * Approved link sources whose ayah pages our server reads (eQuranLibrary, QuranoHadith), as tafseers for the main list.
+ * Without a database: QuranoHadith only, as studyLinks gives.
+ */
+export async function linkTafsirs(): Promise<TafsirEdition[]> {
+  const res = await cached('linkTafsirs', () => db!.select().from(sources).where(and(eq(sources.kind, 'link'), eq(sources.status, 'approved'))).orderBy(asc(sources.sort), asc(sources.id)));
+  if (!res) return [QOH_EDITION];
+  return res.filter(src => src.urlPattern && (isEql(src.urlPattern) || isQoh(src.urlPattern)))
+    .map(src => ({slug: src.slug, name: src.name, language_name: LANG_NAME[src.lang], author_name: src.author || undefined, site: siteOf(src), url: src.urlPattern!}));
 }
 
 /** A related ayah as the Study panel shows it: its Arabic as tokens, shared words marked. */
