@@ -72,13 +72,20 @@ export function transMeta(eds: TransEdition[], id: string){
 }
 
 export type CloudAyah = {number: number; text: string; numberInSurah: number; juz: number; page?: number; surah: {number: number; name: string; englishName: string}};
-type Edition = {edition: {identifier: string; language: string}; ayahs: CloudAyah[]};
+/** `qpc`: the Arabic is quran.com's QPC Hafs text (built from Quran Foundation), the same text getUthmani() returns. */
+type Edition = {edition: {identifier: string; language: string; qpc?: boolean}; ayahs: CloudAyah[]};
 /** The Uthmani edition is only a fallback for quran.com's text (getUthmani); clean it so it still reads right. */
 const cleanEd = (e: Edition): Edition => e.edition?.identifier === 'quran-uthmani' ? {...e, ayahs: e.ayahs.map(x => ({...x, text: fixTanzil(x.text)}))} : e;
 export const getSurahEditions = (n: number, ids: string[]) => editions('chapter', n, ids);
-export const getJuzEdition = async (j: number, id: string) => (await editions('juz', j, [id]))[0];
-export const getPageEdition = async (p: number, id: string) => (await editions('page', p, [id]))[0];
-export async function getAyahEditions(s: number, a: number, ids: string[]): Promise<(CloudAyah & {edition: {identifier: string}})[]> {
+export const getJuzEditions = (j: number, ids: string[]) => editions('juz', j, ids);
+export const getPageEditions = (p: number, ids: string[]) => editions('page', p, ids);
+/**
+ * The QPC Hafs text as a "s:a" map when the Arabic edition came from Quran Foundation (null otherwise), so pages that
+ * already have it don't fetch it a second time through getUthmani().
+ */
+export const qpcText = (e: {edition: {qpc?: boolean}; ayahs: CloudAyah[]} | undefined): Record<string, string> | null =>
+  e?.edition.qpc ? Object.fromEntries(e.ayahs.map(x => [`${x.surah.number}:${x.numberInSurah}`, x.text])) : null;
+export async function getAyahEditions(s: number, a: number, ids: string[]): Promise<(CloudAyah & {edition: {identifier: string; qpc?: boolean}})[]> {
   return (await editions('verse', `${s}:${a}`, ids)).map(e => ({...e.ayahs[0], edition: e.edition}));
 }
 
@@ -130,7 +137,7 @@ async function qfEditions(kind: IPKind, id: string | number, ids: string[]): Pro
   }
   if (!vs.length) throw new Error('Quran Foundation returned no ayahs');
   return ids.map(e => ({
-    edition: {identifier: e, language: e.startsWith('quran') ? 'ar' : e.split('.')[0]},
+    edition: {identifier: e, language: e.startsWith('quran') ? 'ar' : e.split('.')[0], ...(e.startsWith('quran') ? {qpc: true} : {})},
     ayahs: vs.map(v => {
       const s = +v.verse_key.split(':')[0], t = v.translations?.find(x => x.resource_id === QF_TRANS[e])?.text;
       return {number: v.id, numberInSurah: v.verse_number, juz: v.juz_number, page: v.page_number, surah: {number: s, name: SURAHS[s - 1].ar, englishName: SURAHS[s - 1].en},

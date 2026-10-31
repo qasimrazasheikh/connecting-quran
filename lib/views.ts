@@ -1,6 +1,6 @@
 /** Builds what each page shows, from the reader's settings (read on the server from the settings cookie). */
 import {BISM_UTH} from './meta';
-import {getIndoPak, getJuzEdition, getPageEdition, getSurahEditions, getSurahList, getTransEditions, getUthmani, getWords, transMeta, getAyahEditions, type CloudAyah, type IPKind} from './quran';
+import {getIndoPak, getJuzEditions, getPageEditions, getSurahEditions, getSurahList, getTransEditions, getWords, qpcText, transMeta, getAyahEditions, type CloudAyah} from './quran';
 import type {Settings} from './settings';
 import {buildWords, ipBody, plainIP, plainTokens, stripBismillah, tajweedTokens, type WordItem} from './text';
 
@@ -18,8 +18,6 @@ async function bismFor(ip: boolean){
   if (!ip) return BISM_UTH;
   try{ return ipBody((await getIndoPak('verse', '1:1'))['1:1'] || '') || BISM_UTH; }catch{ return BISM_UTH; }
 }
-/** quran.com's Uthmani text (null if it could not load: the alquran.cloud edition is shown instead). */
-const uthText = (kind: IPKind, id: string | number) => getUthmani(kind, id).catch(() => null);
 function makeAyahs(ar: CloudAyah[], uth: Record<string, string> | null, tj: CloudAyah[] | null, ip: IPTexts | null, words: Map<string, import('./text').QWord[]> | null,
                    trans: {meta: ReturnType<typeof transMeta>; ayahs: CloudAyah[]}[], st: Settings, sname?: (a: CloudAyah) => string): AyahView[] {
   return ar.map((ay, i) => {
@@ -41,10 +39,12 @@ export async function surahView(n: number, st: Settings){
   const [surahs, eds] = await Promise.all([getSurahList(), getTransEditions()]);
   const ipOn = st.script === 'indopak', tjOn = st.tajweed && !ipOn;
   const ids = ['quran-uthmani', ...(tjOn ? ['quran-tajweed'] : []), ...st.trans];
-  const [data, uth, ip, words, bism] = await Promise.all([
-    getSurahEditions(n, ids), uthText('chapter', n), ipOn ? ipText('chapter', n) : null,
+  // the Arabic and translations come in one call; its Arabic is quran.com's QPC text (null if AlQuran Cloud stood in)
+  const [data, ip, words, bism] = await Promise.all([
+    getSurahEditions(n, ids), ipOn ? ipText('chapter', n) : null,
     (st.wbw || ipOn) ? getWords('chapter', n, st.wbwLang).catch(() => null) : null, bismFor(ipOn),
   ]);
+  const uth = qpcText(data[0]);
   const ar = data[0].ayahs.map(x => ({...x, surah: x.surah || {number: n, name: '', englishName: ''}}));
   ar.forEach(x => { x.surah = {number: n, name: surahs[n - 1].ar, englishName: surahs[n - 1].en}; });
   const tj = tjOn ? data[1].ayahs : null;
@@ -60,11 +60,12 @@ export async function juzView(j: number, st: Settings){
   const [surahs, eds] = await Promise.all([getSurahList(), getTransEditions()]);
   const ipOn = st.script === 'indopak', tjOn = st.tajweed && !ipOn;
   const ids = ['quran-uthmani', ...(tjOn ? ['quran-tajweed'] : []), ...st.trans];
-  const [parts, uth, ip, words, bism] = await Promise.all([
-    Promise.all(ids.map(id => getJuzEdition(j, id))), uthText('juz', j), ipOn ? ipText('juz', j) : null,
+  // one call for the Arabic and every translation (was one per edition, plus the Arabic again)
+  const [parts, ip, words, bism] = await Promise.all([
+    getJuzEditions(j, ids), ipOn ? ipText('juz', j) : null,
     (st.wbw || ipOn) ? getWords('juz', j, st.wbwLang).catch(() => null) : null, bismFor(ipOn),
   ]);
-  const tj = tjOn ? parts[1].ayahs : null;
+  const uth = qpcText(parts[0]), tj = tjOn ? parts[1].ayahs : null;
   const tr = parts.slice(tjOn ? 2 : 1).map(d => ({meta: transMeta(eds, d.edition.identifier), ayahs: d.ayahs}));
   return {
     surahs,
@@ -77,12 +78,13 @@ export async function mushafView(p: number, st: Settings){
   const [surahs, eds] = await Promise.all([getSurahList(), getTransEditions()]);
   const ipOn = st.script === 'indopak', tjOn = st.tajweed && !ipOn;
   // only the first chosen translation: the Mushaf shows it in popovers (hover/tap, and by the ayah being recited)
-  const [cloud, uth, ip, tj, words, bism, trd] = await Promise.all([
-    getPageEdition(p, 'quran-uthmani'), uthText('page', p), ipOn ? ipText('page', p) : null,
-    tjOn ? getPageEdition(p, 'quran-tajweed').catch(() => null) : null,
+  // the Arabic and the first translation in one call; tajweed (AlQuran Cloud only) stays optional
+  const [[cloud, trd], ip, tj, words, bism] = await Promise.all([
+    getPageEditions(p, ['quran-uthmani', ...st.trans.slice(0, 1)]), ipOn ? ipText('page', p) : null,
+    tjOn ? getPageEditions(p, ['quran-tajweed']).then(d => d[0]).catch(() => null) : null,
     (st.wbw || ipOn) ? getWords('page', p, st.wbwLang).catch(() => null) : null, bismFor(ipOn),
-    st.trans[0] ? getPageEdition(p, st.trans[0]).catch(() => null) : null,
   ]);
+  const uth = qpcText(cloud);
   const tr = trd ? [{meta: transMeta(eds, trd.edition.identifier), ayahs: trd.ayahs}] : [];
   return {
     surahs,
@@ -94,9 +96,10 @@ export async function mushafView(p: number, st: Settings){
 
 /** The ayah shown at the top of the Tafseer page. */
 export async function ayahQuote(s: number, a: number, st: Settings){
-  const [eds, d, uth, ip] = await Promise.all([
-    getTransEditions(), getAyahEditions(s, a, ['quran-uthmani', ...st.trans.slice(0, 2)]), uthText('verse', `${s}:${a}`),
+  const [eds, d, ip] = await Promise.all([
+    getTransEditions(), getAyahEditions(s, a, ['quran-uthmani', ...st.trans.slice(0, 2)]),
     st.script === 'indopak' ? getIndoPak('verse', `${s}:${a}`).catch(() => null) : null,
   ]);
+  const uth = d[0].edition.qpc ? {[`${s}:${a}`]: d[0].text} : null;
   return {ar: ip?.[`${s}:${a}`] || uth?.[`${s}:${a}`] || stripBismillah(d[0].text, s, a), ip: !!ip?.[`${s}:${a}`], trans: d.slice(1).map(t => ({...transMeta(eds, t.edition.identifier), text: t.text}))};
 }
