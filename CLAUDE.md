@@ -23,7 +23,8 @@ npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah J
 ```
 
 Env (`.env.local`, and Vercel project settings): `DATABASE_URL` (Neon), `ADMIN_PASSWORD` (8+ chars), `ADMIN_SECRET`
-(32+ random chars, signs the login cookie), `CLIENT_ID` / `CLIENT_SECRET` (Quran Foundation API, production client).
+(32+ random chars, signs the login cookie), `CLIENT_ID` / `CLIENT_SECRET` (Quran Foundation API, production client),
+`CRON_SECRET` (Vercel Cron's key for `/api/warm`, the daily cache warm-up scheduled in `vercel.json`).
 Without `DATABASE_URL` the site runs on the built-in lists.
 
 Offline tests (need a build first; the scripts are bash and write logs to /tmp — use Git Bash on Windows):
