@@ -44,7 +44,7 @@ export default function SettingsDrawer() {
   );
   const tafRow = (e: TafsirEdition) => (
     <label key={e.slug} className={opt}><input type="checkbox" data-taf={e.slug} checked={S.tafsirs.includes(e.slug)} onChange={ev => toggleTaf(e.slug, ev.target.checked)} />
-      <span className={natCls(e.name)}>{e.name}</span><small className={cx('ml-auto text-right text-xs text-muted', natCls(e.author_name))}>{e.author_name || ''}</small></label>
+      <span className={natCls(e.name, e.language_name)}>{e.name}</span><small className={cx('ml-auto text-right text-xs text-muted', natCls(e.author_name, e.language_name))}>{e.author_name || ''}</small></label>
   );
   const by = (l: string) => eds?.tafsir.filter(e => e.language_name.toLowerCase() === l) || [];
   // same language switch as the Study panel; defaults to the language of the first pick
@@ -85,8 +85,6 @@ export default function SettingsDrawer() {
         {transGroup('en', 'English translations')}
         <p className="text-[13px] text-muted">Pick up to 4 translations.</p>
       </>}
-      <h4 className={h4}>Tafseer layout</h4>
-      <Seg id="tafLay" value={S.tafLayout} onPick={v => set({tafLayout: v})} items={[['accordion', 'Accordion'], ['split', 'List + reader']]} />
       <div ref={tafRef} id="tafSet" className="scroll-mt-2">
         <h4 className={h4}>Your tafseers</h4>
         {eds && <>

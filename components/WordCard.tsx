@@ -85,7 +85,7 @@ export default function WordCard() {
       {info && <>
         {(info.meanEn || info.meanUr) && <div className="mt-0.5 text-[15px]">
           {info.meanEn && <div><b>Meaning:</b> {info.meanEn}</div>}
-          {info.meanUr && <span className="urdu block text-[17px]" style={{lineHeight: 2}}>{info.meanUr}</span>}
+          {info.meanUr && <span className="urdu block text-[17px]" style={{lineHeight: 2.5}}>{info.meanUr}</span>}
         </div>}
         {info.segs.length ? <>
           <div className="mt-3 border-t border-line pt-2.5">

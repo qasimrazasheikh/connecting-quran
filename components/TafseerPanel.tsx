@@ -1,5 +1,5 @@
 'use client';
-import {Fragment, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {useEffect, useMemo, useState, type ReactNode} from 'react';
 import {useApp} from './AppProvider';
 import {Icon} from './Icons';
 import Link from 'next/link';
@@ -8,11 +8,7 @@ import type {RelatedItem, VideoCard} from '@/lib/catalog';
 import {isQoh, tafsirTwin, type TafsirEdition} from '@/lib/meta';
 import type {StudyTab} from '@/lib/step';
 import {tafsirHtml} from '@/lib/tafsir-client';
-import {abtn, btnYt, cx, empty, natCls, segBtn, segWrap} from '@/lib/ui';
-
-/* Kept while moving between ayahs: which section is open (at most one, so the page stays short). */
-const accOpen = new Set<string>();
-let accInit = false;
+import {abtn, btnGhost, btnYt, cx, empty, natCls, segBtn, segWrap, sel} from '@/lib/ui';
 
 type Status = Record<string, 'none' | 'error' | 'ok'>;
 
@@ -83,97 +79,111 @@ function useTafsirList(s: number, a: number, lang: TLang) {
   return {eds, err, list, picks, status, meta};
 }
 /** Author (in its own script and font). */
-const sub = (m: TafsirEdition | undefined, _pick: boolean) => <>
-  {m?.author_name && <bdi className={natCls(m.author_name)}>{m.author_name}</bdi>}</>;
-/** Divider between the reader's picks and the other tafseers of the language. */
-const Others = ({n, lang}: {n: number; lang: TLang}) => <div className="mb-2 mt-3.5 text-[12px] font-semibold uppercase tracking-wider text-muted">Other {langText(lang)} tafseers ({n})</div>;
+const by = (m?: TafsirEdition) => m?.author_name ? <bdi className={natCls(m.author_name, m.language_name)}>{m.author_name}</bdi> : null;
+const noteText = (st?: Status[string]) => st === 'none' ? 'No note for this ayah' : st === 'error' ? 'Unavailable' : '';
 
-/** Ayah stepping supplied by the Tafseer page; `compact` is the phone version, beside the layout switch. */
+/** Ayah stepping supplied by the Tafseer page; `compact` is the phone version, beside the toolbar. */
 type Nav = (compact: boolean) => ReactNode;
 
-function Accordion({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav}) {
-  const {openSettings, update} = useApp();
-  const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
-  const [open, setOpen] = useState<Set<string>>(() => new Set(accOpen));
-  // open the first tafseer the first time, and again when a language has none open
-  useEffect(() => { if (list.length && (!accInit || !list.some(x => accOpen.has(x)))){ accInit = true; accOpen.clear(); accOpen.add(list[0]); setOpen(new Set(accOpen)); } }, [list]);
-  // opening a tafseer closes the one that was open
-  const setOne = (slug: string, on: boolean) => { accOpen.clear(); if (on) accOpen.add(slug); setOpen(new Set(accOpen)); };
-  if (err) return <div className={empty}>Could not load the tafseer list. {err}</div>;
-  if (!eds) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
-  if (!list.length) return <div className={empty}>No {langText(lang)} tafseers are available yet.</div>;
+/* Kept while stepping between ayahs: the second tafseer of the compare view ('' = compare is off). */
+let cmpKept = '';
+
+/** A tafseer picker for the compare view: the reader's list first, then the rest. */
+function TafsirSelect({value, list, picks, meta, onPick, label}: {value: string; list: string[]; picks: string[]; meta: (s: string) => TafsirEdition | undefined; onPick: (s: string) => void; label: string}) {
+  const opt = (x: string) => <option key={x} value={x}>{meta(x)?.name || x}{meta(x)?.author_name ? ` · ${meta(x)!.author_name}` : ''}</option>;
   return (
-    <div>
-      <div className="mb-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted">
-        <span>{list.length} {langText(lang)} tafseer{list.length > 1 ? 's' : ''}{picks.length ? ` · ${picks.length} in your list` : ''} · ayah {s}:{a}</span><span className="flex-1" />
-        <button className={abtn} data-acc="collapse" onClick={() => { accOpen.clear(); setOpen(new Set()); }}>Collapse all</button>
-        <button className={abtn} data-acc="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
-        <button className={abtn} data-acc="layout" title="Switch to list + reader layout" onClick={() => update({tafLayout: 'split'})}><Icon.book />List view</button>
-        {nav && <span className="flex gap-1 sm:hidden">{nav(true)}</span>}
-      </div>
-      {list.map((slug, i) => {
-        const m = meta(slug), isOpen = open.has(slug), st = status[slug], pick = i < picks.length;
-        return (
-          <Fragment key={slug}>
-            {i === picks.length && i > 0 && <Others n={list.length - picks.length} lang={lang} />}
-            <section data-slug={slug} className={cx('acc mb-2 overflow-hidden rounded-xl border bg-surface', isOpen ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--line))]' : 'border-line')}>
-              <button className={cx('flex w-full items-center gap-2.5 border-0 px-3.5 py-3 text-left', isOpen ? 'bg-brand-soft' : 'bg-transparent hover:bg-surface2')} aria-expanded={isOpen} onClick={() => setOne(slug, !isOpen)}>
-                <span className="min-w-0 flex-1"><b className={cx('block text-[15px]', natCls(m?.name), st === 'none' && 'text-muted')}>{m?.name || slug}</b><small className="text-[12.5px] text-muted">{sub(m, pick)}</small></span>
-                <span className="whitespace-nowrap text-xs text-muted">{st === 'none' ? 'No note for this ayah' : st === 'error' ? 'Unavailable' : ''}</span>
-                <Icon.chev className={cx('flex-none transition-transform', isOpen ? 'rotate-180 text-brand' : 'text-muted')} />
-              </button>
-              {isOpen && <div className="border-t border-line px-4 py-3.5"><TafsirText slug={slug} meta={m} s={s} a={a} /></div>}
-            </section>
-          </Fragment>
-        );
-      })}
-    </div>
+    <select className={cx(sel, 'w-full')} aria-label={label} value={value} onChange={e => onPick(e.target.value)} dir="auto">
+      {picks.length > 0 && <optgroup label="Your list">{picks.map(opt)}</optgroup>}
+      <optgroup label={picks.length ? 'Other tafseers' : 'Tafseers'}>{list.filter(x => !picks.includes(x)).map(opt)}</optgroup>
+    </select>
   );
 }
 
-function Split({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav}) {
+/**
+ * The tafseers of one language as a reader: the reader's own list as chips across the top, the chosen tafseer below
+ * like a book page with the previous / next tafseer at its foot. "+ more" opens every other tafseer with a filter;
+ * Compare puts a second tafseer beside the first (stacked when the panel is narrow).
+ */
+function Reader({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav}) {
   const {settings, update, openSettings} = useApp();
   const {eds, err, list, picks, status, meta} = useTafsirList(s, a, lang);
+  const [all, setAll] = useState(false);
+  const [q, setQ] = useState('');
+  const [cmp, setCmpState] = useState(cmpKept);
+  const setCmp = (x: string) => { cmpKept = x; setCmpState(x); };
   const cur = list.includes(settings.tafLast) ? settings.tafLast : list[0];
-  const readerRef = useRef<HTMLElement>(null);
-  useEffect(() => { document.querySelector(`.titem[data-slug="${CSS.escape(cur || '')}"]`)?.scrollIntoView({block: 'nearest', inline: 'nearest'}); }, [cur]);
+  const show = (x: string) => { update({tafLast: x}); setAll(false); setQ(''); };
+  // keep the chosen chip in view in the sideways-scrolling row
+  useEffect(() => { document.querySelector(`.tchip[data-slug="${CSS.escape(cur || '')}"]`)?.scrollIntoView({block: 'nearest', inline: 'nearest'}); }, [cur]);
   if (err) return <div className={empty}>Could not load the tafseer list. {err}</div>;
   if (!eds) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
   if (!cur) return <div className={empty}>No {langText(lang)} tafseers are available yet.</div>;
-  const m = meta(cur);
-  const item = 'titem flex flex-none flex-col items-start rounded-[10px] border px-3 py-2 text-left text-ink no-underline max-w-[220px] @[620px]:w-full @[620px]:max-w-none';
+  const m = meta(cur), i = list.indexOf(cur), prev = list[i - 1], next = list[i + 1];
+  // a tafseer opened from the full list sits after the reader's own chips until another is chosen
+  const chips = picks.includes(cur) ? picks : [...picks, cur];
+  const second = cmp && list.includes(cmp) && cmp !== cur ? cmp : list.find(x => x !== cur) || '';
+  const rtl = lang !== 'en';
+  const qq = q.trim().toLowerCase();
+  const others = list.filter(x => !picks.includes(x) && (!qq || `${meta(x)?.name} ${meta(x)?.author_name ?? ''} ${x}`.toLowerCase().includes(qq)));
+  const where = picks.includes(cur) ? `${picks.indexOf(cur) + 1} of ${picks.length} in your list` : `Other ${langText(lang)} tafseer`;
+  const stepBtn = (x: string | undefined, dir: -1 | 1) => x
+    ? <button className={cx(btnGhost, 'max-w-[48%] !px-3 !py-1.5')} data-t={dir < 0 ? 'prev' : 'next'} onClick={() => { show(x); document.querySelector('.tread')?.scrollIntoView({block: 'nearest'}); }}>
+        {dir < 0 && '← '}<span className={cx('truncate', natCls(meta(x)?.name, meta(x)?.language_name))}>{meta(x)?.name || x}</span>{dir > 0 && ' →'}</button>
+    : <span />;
   return (
     <div>
-      <div className="mb-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted">
+      <div className="mb-2 flex flex-wrap items-center gap-1 text-[13px] text-muted">
         <span>{list.length} {langText(lang)} tafseer{list.length > 1 ? 's' : ''}{picks.length ? ` · ${picks.length} in your list` : ''} · ayah {s}:{a}</span><span className="flex-1" />
-        <button className={abtn} data-ts="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
-        <button className={abtn} data-ts="layout" title="Switch to accordion layout" onClick={() => update({tafLayout: 'accordion'})}><Icon.chev />Accordion view</button>
+        <button className={cx(abtn, cmp && '!bg-brand-soft !text-brand')} data-t="compare" aria-pressed={!!cmp} onClick={() => setCmp(cmp ? '' : second)}><Icon.book />{cmp ? 'Exit compare' : 'Compare'}</button>
+        <button className={abtn} data-t="edit" onClick={() => openSettings('tafsir')}>Edit my list</button>
         {nav && <span className="flex gap-1 sm:hidden">{nav(true)}</span>}
       </div>
-      <div className="@container">
-        <div className="flex flex-col gap-2.5 @[620px]:flex-row @[620px]:items-start">
-          <nav role="tablist" aria-label="Tafseers" className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin] @[620px]:sticky @[620px]:top-[76px] @[620px]:max-h-[calc(100vh-120px)] @[620px]:w-[230px] @[620px]:flex-none @[620px]:flex-col @[620px]:overflow-y-auto">
-            {list.map((slug, i) => {
-              const mm = meta(slug), on = slug === cur, st = status[slug], pick = i < picks.length;
-              return (
-                <Fragment key={slug}>
-                  {i === picks.length && i > 0 && <span className="hidden px-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted @[620px]:block">Other {langText(lang)}</span>}
-                  <button role="tab" data-slug={slug} aria-selected={on} title={(mm?.name || slug) + (mm?.author_name ? ' — ' + mm.author_name : '')} onClick={() => update({tafLast: slug})}
-                    className={cx(item, on ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand')}>
-                    <b title={mm?.name || slug} className={cx('max-w-full text-xs leading-snug break-words @[620px]:whitespace-normal', natCls(mm?.name), on ? 'text-brand' : st === 'none' ? 'text-muted' : '')}>{mm?.name || slug}</b>
-                    <small title={mm?.author_name || ''} className="max-w-full text-[11px] text-muted break-words @[620px]:whitespace-normal">{sub(mm, pick)}</small>
-                    {(st === 'none' || st === 'error') && <span className="text-[11px] text-muted">{st === 'none' ? 'No note' : 'Unavailable'}</span>}
-                  </button>
-                </Fragment>
-              );
-            })}
-          </nav>
-          {/* no heading: the highlighted item in the list already names the tafseer and its author */}
-          <section ref={readerRef} role="tabpanel" aria-label={m?.name} className="min-w-0 rounded-xl border border-line bg-surface @[620px]:flex-1">
-            <div className="px-4 py-3.5"><TafsirText key={cur + s + ':' + a} slug={cur} meta={m} s={s} a={a} /></div>
-          </section>
+      {!cmp && <>
+        <div role="tablist" aria-label="Your tafseers" dir={rtl ? 'rtl' : 'ltr'} className="mb-3 flex gap-2 overflow-x-auto border-b border-line pb-2.5 [scrollbar-width:thin]">
+          {chips.map(x => {
+            const mm = meta(x), on = x === cur, st = status[x];
+            return <button key={x} role="tab" data-slug={x} aria-selected={on} title={[mm?.author_name, noteText(st)].filter(Boolean).join(' · ')} onClick={() => show(x)}
+              className={cx('tchip flex-none whitespace-nowrap rounded-full border px-4 py-1', on ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink hover:border-brand', !on && st === 'none' && 'opacity-55')}>
+              <span className={cx('text-[16px]', natCls(mm?.name, mm?.language_name))}>{mm?.name || x}</span></button>;
+          })}
+          {list.length > picks.length && <button data-t="all" dir="ltr" aria-expanded={all} onClick={() => setAll(!all)}
+            className={cx('flex-none whitespace-nowrap rounded-full border border-dashed px-4 py-1 text-sm', all ? 'border-brand text-brand' : 'border-line text-muted hover:border-brand hover:text-brand')}>
+            {all ? 'Close list' : `+ ${list.length - picks.length} more`}</button>}
         </div>
-      </div>
+        {all && <div className="mb-3 rounded-xl border border-line bg-surface2 p-2.5" data-t="sheet">
+          <input className={cx(sel, 'mb-2 w-full')} type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Filter by name or scholar…" aria-label="Filter tafseers" autoFocus />
+          <div className="grid max-h-[45vh] gap-1.5 overflow-y-auto sm:grid-cols-2" dir={rtl ? 'rtl' : 'ltr'}>
+            {others.map(x => { const mm = meta(x); return (
+              <button key={x} data-slug={x} onClick={() => show(x)} className={cx('flex flex-col items-start rounded-lg border px-3 py-1.5 text-start', x === cur ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand')}>
+                <span className={cx('text-[16px]', natCls(mm?.name, mm?.language_name))}>{mm?.name || x}</span>
+                <small className="text-[12.5px] text-muted">{by(mm)}</small></button>); })}
+            {!others.length && <div className="p-2 text-sm text-muted">Nothing matches “{q}”.</div>}
+          </div>
+        </div>}
+        <article className="tread scroll-mt-20 rounded-2xl border border-line bg-surface px-4 py-3.5" role="tabpanel" aria-label={m?.name}>
+          <header className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line pb-2.5" dir={rtl ? 'rtl' : 'ltr'}>
+            <div className="min-w-0"><h3 className={cx('m-0 text-[22px] font-bold text-brand', natCls(m?.name, m?.language_name))}>{m?.name || cur}</h3>
+              <div className="text-[14.5px] text-muted">{by(m)}</div></div>
+            <span className="flex-1" />
+            <span className="whitespace-nowrap rounded-full bg-brand-soft px-2.5 py-0.5 text-[12px] text-brand" dir="ltr">{where}</span>
+          </header>
+          <TafsirText key={cur + s + ':' + a} slug={cur} meta={m} s={s} a={a} />
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">{stepBtn(prev, -1)}{stepBtn(next, 1)}</div>
+        </article>
+      </>}
+      {cmp && <div className="@container">
+        {/* side by side in reading order: the first tafseer on the right for Urdu and Arabic */}
+        <div className="grid gap-3 @[680px]:grid-cols-2" dir={rtl ? 'rtl' : 'ltr'}>
+          {([[cur, show, 'First tafseer'], [second, setCmp, 'Second tafseer']] as const).map(([x, pick, label], k) => (
+            <article key={k} data-cmp={k} className="min-w-0 rounded-2xl border border-line bg-surface px-3.5 py-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <TafsirSelect value={x} list={list} picks={picks} meta={meta} onPick={pick} label={label} />
+                {k === 0 && <button className={abtn} title="Swap the two" aria-label="Swap the two tafseers" data-t="swap" onClick={() => { const c = cur; show(second); setCmp(c); }}><Icon.repeat /></button>}
+              </div>
+              {x ? <TafsirText key={x + s + ':' + a} slug={x} meta={meta(x)} s={s} a={a} /> : <div className={empty}>Only one {langText(lang)} tafseer is available.</div>}
+            </article>))}
+        </div>
+      </div>}
     </div>
   );
 }
@@ -237,7 +247,7 @@ function QohTafsirs({s, a}: {s: number; a: number}) {
         return (
           <section key={x.name} className={cx('acc mb-2 overflow-hidden rounded-xl border bg-surface', isOpen ? 'border-[color-mix(in_srgb,var(--brand)_45%,var(--line))]' : 'border-line')}>
             <button className={cx('flex w-full items-center gap-2.5 border-0 px-3.5 py-3 text-left', isOpen ? 'bg-brand-soft' : 'bg-transparent hover:bg-surface2')} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? '' : x.name)}>
-              <span className="min-w-0 flex-1"><b className={cx('block text-[15px]', natCls(x.name))}>{x.name}</b><small className={cx('text-[12.5px] text-muted', natCls(x.author))}>{x.author}</small></span>
+              <span className="min-w-0 flex-1"><b className={cx('block text-[19px]', natCls(x.name, 'urdu'))}>{x.name}</b><small className={cx('text-[14.5px] text-muted', natCls(x.author, 'urdu'))}>{x.author}</small></span>
               <Icon.chev className={cx('flex-none transition-transform', isOpen ? 'rotate-180 text-brand' : 'text-muted')} />
             </button>
             {isOpen && <div className="border-t border-line px-4 py-3.5"><div className="tafsir urdu rtl" dangerouslySetInnerHTML={{__html: tafsirHtml(x.text, 'urdu')}} /></div>}
@@ -312,7 +322,7 @@ export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: num
       {nav && tafTab !== 'text' && <div className="mb-2 flex justify-end gap-1 sm:hidden">{nav(true)}</div>}
       {tafTab === 'videos' ? <VideoCards videos={study?.videos ?? null} sname={sname} />
         : tafTab === 'related' ? <RelatedAyahs s={s} a={a} count={study?.related} />
-        : settings.tafLayout === 'split' ? <Split s={s} a={a} lang={lang} nav={nav} /> : <Accordion s={s} a={a} lang={lang} nav={nav} />}
+        : <Reader s={s} a={a} lang={lang} nav={nav} />}
     </div>
   );
 }

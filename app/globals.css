@@ -79,7 +79,9 @@
   --font-ar: "Scheherazade New", "Amiri Quran", serif;
   --font-q: "UthmanicHafs", "Scheherazade New", serif;
   --font-amiri: "Amiri Quran", "Amiri", serif;
-  --font-ur: "Mehr Nastaliq Web", "Noto Nastaliq Urdu", serif;
+  --font-ur: "Jameel Device", "Mehr Nastaliq Web", "Noto Nastaliq Urdu", serif;
+  --font-ur-read: "Jameel Device Read", "Mehr Read", "Noto Nastaliq Urdu", serif;
+  --font-ur-name: "Jameel Device Name", "Mehr Name", "Noto Nastaliq Urdu", serif;
   --font-ip: "IndoPak Nastaleeq", "Scheherazade New", serif;
   --font-sn: "surahnames";
   --shadow-card: var(--shadow);
@@ -95,6 +97,15 @@
   src:local("AlQuran IndoPak by QuranWBW"),url("/fonts/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2") format("woff2")}
 /* Urdu text: Mehr Nastaliq Web (Mehr Type & CSaLT, CC BY-SA 4.0, credited in the footer), the Lahori Nastaliq quran.com uses */
 @font-face{font-family:"Mehr Nastaliq Web";font-display:swap;src:local("Mehr Nastaliq Web"),url("/fonts/MehrNastaliqWeb.woff2") format("woff2")}
+/* Jameel Noori Nastaleeq, only when the reader's device has it (no published licence, so we never serve the file).
+   It draws smaller than Mehr, hence size-adjust. Translations and tafseers (--font-ur-read) are drawn larger again:
+   Mehr at 120%, Jameel at 130% of the text size, so the default 20px reads as 24px / 26px. */
+@font-face{font-family:"Jameel Device";src:local("Jameel Noori Nastaleeq"),local("JameelNooriNastaleeq");size-adjust:108%}
+@font-face{font-family:"Jameel Device Read";src:local("Jameel Noori Nastaleeq"),local("JameelNooriNastaleeq");size-adjust:130%}
+/* Tafseer names (.nat-ur): Nastaliq draws small beside Latin text of the same size */
+@font-face{font-family:"Jameel Device Name";src:local("Jameel Noori Nastaleeq"),local("JameelNooriNastaleeq");size-adjust:125%}
+@font-face{font-family:"Mehr Name";font-display:swap;src:local("Mehr Nastaliq Web"),url("/fonts/MehrNastaliqWeb.woff2") format("woff2");size-adjust:115%}
+@font-face{font-family:"Mehr Read";font-display:swap;src:local("Mehr Nastaliq Web"),url("/fonts/MehrNastaliqWeb.woff2") format("woff2");size-adjust:120%}
 
 @layer base{
 html,body{margin:0}
@@ -118,7 +129,7 @@ button{cursor:pointer}
   .ip .bism{font-family:var(--font-ip);line-height:2.2}
   /* a reader page whose Indo-Pak text could not load falls back to Uthmani */
   .ip .no-ip .q-ar,.ip .no-ip .bism{font-family:var(--font-q);line-height:2.2}
-  .urdu{font-family:var(--font-ur);direction:rtl;text-align:right;line-height:2.3}
+  .urdu{font-family:var(--font-ur-read);direction:rtl;text-align:right;line-height:2.9}
   .tr-text{font-size:var(--tr-size)}
   .tr-text.urdu{font-size:calc(var(--tr-size) + 2px)}
 
@@ -150,7 +161,7 @@ button{cursor:pointer}
   /* tafseer text */
   .tafsir{font-size:calc(var(--tr-size) - 1px);line-height:1.75}
   .tafsir p{margin:0 0 .9em}
-  .tafsir.urdu{font-family:var(--font-ur);font-size:calc(var(--tr-size) + 2px);line-height:2.25}
+  .tafsir.urdu{font-family:var(--font-ur-read);font-size:calc(var(--tr-size) + 2px);line-height:2.85}
   .tafsir.rtl{direction:rtl;text-align:right}
   .tafsir.arabic{font-family:var(--font-ar);font-size:calc(var(--tr-size) + 4px);line-height:2;direction:rtl;text-align:right}
   .tafsir h1,.tafsir h2,.tafsir h3,.tafsir h4{font-size:1.05em;margin:1em 0 .4em}
@@ -184,7 +195,7 @@ button{cursor:pointer}
 /* Tafseer names in Arabic / Urdu script (natCls): own font and room for Nastaliq's tall letters and low dots. Outside
    @layer so the line height beats text-sm / leading-tight on the same element (those clip the dots in truncated lists). */
 .nat-ar{font-family:var(--font-ar);line-height:1.45;unicode-bidi:isolate}
-.nat-ur{font-family:var(--font-ur);line-height:2.3;unicode-bidi:isolate}
+.nat-ur{font-family:var(--font-ur-name);line-height:2.1;unicode-bidi:isolate}
 
 /* Ayah-card highlights sit outside @layer so they beat the card's own utilities (border-line, shadow-card, bg-surface) */
 .ayah.playing{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 7%,var(--surface));box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}

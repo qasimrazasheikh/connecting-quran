@@ -4,7 +4,7 @@ export type Settings = {
   theme: 'auto' | 'light' | 'dark'; palette: 'midnight' | 'ocean' | 'classic';
   showAr: boolean; script: 'uthmani' | 'indopak'; reciter: string; autoPlay: boolean; autoScroll: boolean;
   wbw: boolean; wbwLang: 'ur' | 'en'; tajweed: boolean; wordSound: boolean; speed: number;
-  tafLayout: 'accordion' | 'split'; tafLast: string;
+  tafLast: string;
   /** Study panel language filter for tafseers; '' = the language of the first chosen tafseer. */
   tafLang: '' | 'ur' | 'en' | 'ar';
   /** Mushaf: the playing ayah's translation in a popover by it (recTrans); hover/tap an ayah for its translation (mTrans). */
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tafsirs: ['ur-tafseer-ibn-e-kaseer', 'tafsir-bayan-ul-quran', 'en-tafisr-ibn-kathir', 'en-tafsir-maarif-ul-quran', 'qe-urdu-junagarhi'],
   arSize: 32, trSize: 18, theme: 'auto', palette: 'midnight', showAr: true, script: 'indopak',
   reciter: 'ar.alafasy', autoPlay: true, autoScroll: true, wbw: false, wbwLang: 'ur', tajweed: false,
-  wordSound: false, speed: 1, tafLayout: 'accordion', tafLast: '', tafLang: '', recTrans: false, mTrans: true,
+  wordSound: false, speed: 1, tafLast: '', tafLang: '', recTrans: false, mTrans: true,
 };
 export const COOKIE = 'noor_settings';
 /** Only the settings the server needs are kept in the cookie (small and safe). */

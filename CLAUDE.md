@@ -90,7 +90,8 @@ new external call, add a matching mock route there or the e2e run will break.
   `plainIP` are used. Changes to Arabic text handling need checking by eye in both scripts (and in popovers like the word card).
 - **Fonts** are bundled via `@fontsource/*` packages imported in `app/layout.tsx` — don't add Google Fonts requests.
   The Quran fonts (KFGQPC Uthmanic Hafs, Indo-Pak Nastaleeq, surah names) are files in `public/fonts`, declared in
-  `globals.css`. Uthmani text is quran.com's QPC Hafs text (`getUthmani`), drawn with `--font-q`; the font turns a bare
+  `globals.css`. Urdu text uses Mehr Nastaliq (served) or, when the reader's device has it, Jameel Noori Nastaleeq
+  (`local()` only: it has no published licence, so never ship the file); `size-adjust` faces set their sizes. Uthmani text is quran.com's QPC Hafs text (`getUthmani`), drawn with `--font-q`; the font turns a bare
   Arabic-Indic number into the ayah-end sign (`.endmark`).
 - **Quran Foundation API:** every `API.quranCom` call is signed with an OAuth token (`qfHeaders` in `quran.ts`) and cached
   by URL with `unstable_cache` (fetch's own cache would key on the hourly token).

@@ -5,6 +5,7 @@ import {useApp} from './AppProvider';
 import {getLastRead, mushafHref, type LastRead} from './resume';
 import {Icon} from './Icons';
 import SurahName from './SurahName';
+import {surahMatches} from './SurahSearch';
 import {arNum, JUZ_START} from '@/lib/meta';
 import {btn, cx, empty, grid, linkCard, numBadge} from '@/lib/ui';
 
@@ -25,8 +26,7 @@ export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
         <div className="min-w-0 flex-1"><b className="block text-[15px]">Juz {j.i}</b><span className="text-[12.5px] text-muted">Starts {surahs[j.s - 1].en} {j.s}:{j.a}</span></div>
         <div className="font-amiri text-[22px] text-brand">{arNum(j.i)}</div></Link>))}</div>;
   } else {
-    const qq = query.replace(/[^a-z]/g, '');
-    const items = surahs.filter(s => !query || String(s.n) === query || (qq && s.en.toLowerCase().replace(/[^a-z]/g, '').includes(qq)) || s.mean.toLowerCase().includes(query) || s.ar.includes(q.trim()));
+    const items = surahs.filter(s => surahMatches(s, q));
     list = items.length ? <div className={grid}>{items.map(s => (
       <Link key={s.n} className={linkCard} href={`/surah/${s.n}`}><div className={numBadge}>{s.n}</div>
         <div className="min-w-0 flex-1"><b className="block text-[15px]">{s.en}</b><span className="text-[12.5px] text-muted">{s.mean} · {s.ayahs} ayahs · {s.type}</span></div>
