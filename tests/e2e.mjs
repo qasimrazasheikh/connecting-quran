@@ -90,6 +90,8 @@ await p.click('#wcard [data-wc=say]');
 await p.mouse.click(5, 300); ok(await p.locator('#wcard').count() === 0, 'click outside closes card');
 
 console.log('# player');
+const badr = await (await p.request.get(BASE + '/timings/badr.json')).json();
+ok(badr.u.length === 114 && badr.t[1].length === 286 && badr.t[0].every((x, i, l) => !i || x >= l[i - 1]), 'surah-file reciter: a file and ayah starts for every surah');
 await p.click('#a-2-1 [data-act=play]'); await p.waitForSelector('#player');
 ok((await p.locator('#plTitle').innerText()).includes('2:1'), 'player shows ayah');
 await p.waitForTimeout(500); // files are named by ayah number, so 2:2 and 2:3 are the two after 2:1's

@@ -8,14 +8,21 @@ export const JUZ_START: [number, number][] = [[1,1],[2,142],[2,253],[3,93],[4,24
 const QC = 'https://verses.quran.com', EA = 'https://mirrors.quranicaudio.com/everyayah';
 /** `ar.*` reciters play from islamic.network (by ayah number); the rest are quran.com's recitations (folders as its
  *  /recitations/{id}/by_ayah API returns them), built here so playback starts without an API call per ayah. */
-export const RECITERS: {id: string; name: string; br?: number; dir?: string}[] = [
+/** `timed`: recorded one file per surah; public/timings/<timed>.json gives each ayah's start (scripts/audio-timings.mts). */
+export const RECITERS: {id: string; name: string; br?: number; dir?: string; timed?: string}[] = [
   {id:'ar.alafasy', name:'Mishary Rashid Alafasy', br:128},
   {id:'ar.abdulbasitmurattal', name:'Abdul Basit (Murattal)', br:192},
   {id:'qc.abdulbasitmujawwad', name:'Abdul Basit (Mujawwad)', dir:`${QC}/AbdulBaset/Mujawwad/mp3`},
+  {id:'qt.alijabir', name:'Abdullah Ali Jabir', timed:'alijabir'},
   {id:'ar.abdurrahmaansudais', name:'Abdur-Rahman As-Sudais', br:192},
   {id:'qc.shatri', name:'Abu Bakr Al-Shatri', dir:`${QC}/Shatri/mp3`},
+  {id:'qc.ajmy', name:'Ahmed ibn Ali Al-Ajmy', dir:'https://everyayah.com/data/ahmed_ibn_ali_al_ajamy_128kbps'},
+  {id:'qt.tahoun', name:'Ahmed Tahoun', timed:'tahoun'},
+  {id:'qt.badr', name:'Badr Al-Turki', timed:'badr'},
+  {id:'qt.baleela', name:'Bandar Baleela', timed:'baleela'},
   {id:'ar.hudhaify', name:'Ali Al-Hudhaify', br:128},
   {id:'qc.rifai', name:'Hani Ar-Rifai', dir:`${QC}/Rifai/mp3`},
+  {id:'qt.tunaiji', name:'Khalifah Al-Tunaiji', timed:'tunaiji'},
   {id:'ar.mahermuaiqly', name:'Maher Al-Muaiqly', br:128},
   {id:'ar.husary', name:'Mahmoud Khalil Al-Husary', br:128},
   {id:'ar.husarymujawwad', name:'Al-Husary (Mujawwad)', br:128},
@@ -24,6 +31,7 @@ export const RECITERS: {id: string; name: string; br?: number; dir?: string}[] =
   {id:'ar.minshawi', name:'Muhammad Siddiq Al-Minshawi', br:128},
   {id:'qc.minshawimujawwad', name:'Al-Minshawi (Mujawwad)', dir:`${QC}/Minshawi/Mujawwad/mp3`},
   {id:'ar.muhammadayyoub', name:'Muhammad Ayyoub', br:128},
+  {id:'qt.ghamdi', name:'Saad Al-Ghamdi', timed:'ghamdi'},
   {id:'ar.saoodshuraym', name:'Saood Ash-Shuraym', br:64},
   {id:'qc.dussary', name:'Yasser Ad-Dussary', dir:`${EA}/Yasser_Ad-Dussary_128kbps`},
 ];

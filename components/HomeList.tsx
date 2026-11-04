@@ -53,7 +53,7 @@ export default function HomeList({tab}: {tab: 'surah' | 'juz'}) {
         <Link className={tabCls(tab === 'surah')} href="/">Surah</Link>
         <Link className={tabCls(tab === 'juz')} href="/juz">Juz</Link>
         <input id="q" value={q} onChange={e => setQ(e.target.value)} placeholder={tab === 'juz' ? 'Filter juz…' : 'Search surah by name or number…'}
-          className="w-full min-w-0 rounded-full border border-line bg-surface px-3.5 py-2 text-ink outline-none focus:border-brand md:ml-auto md:w-auto md:min-w-[220px]" />
+          className="w-full min-w-0 rounded-full border border-line bg-surface px-3.5 py-2 text-ink outline-none focus:border-brand md:ml-auto md:w-[340px]" />
       </div>
       {list}
     </>

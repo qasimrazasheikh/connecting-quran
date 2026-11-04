@@ -21,6 +21,7 @@ npm run db:migrate           # apply migrations to DATABASE_URL
 npm run db:seed              # fill the catalogue from the current sources (re-runnable; never overwrites curator edits)
 npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah JSON in data/qul/ (download needs a QUL login; not committed)
 node scripts/split-morph.mts # regenerate data/morph/<s>.json (word grammar, one file per surah) from the corpus file
+node scripts/audio-timings.mts # regenerate public/timings/<id>.json (ayah start times for reciters recorded one file per surah)
 ```
 
 Env (`.env.local`, and Vercel project settings): `DATABASE_URL` (Neon), `ADMIN_PASSWORD` (8+ chars), `ADMIN_SECRET`
@@ -104,6 +105,8 @@ new external call, add a matching mock route there or the e2e run will break.
 - **Theming:** colour tokens are CSS variables in `app/globals.css` (3 palettes × light/dark, `data-theme` on `<html>`);
   Tailwind colours read those variables. Use the tokens rather than hard-coded colours.
 - Old hash links from the single-file site (`#/surah/2/255`) are redirected client-side in `AppProvider` — keep them working.
+- **Reciters** (`RECITERS` in `meta.ts`): most have one audio file per ayah. Those with `timed` have one file per surah: the player seeks to the ayah's
+  start from `public/timings/<timed>.json` and treats reaching the next ayah's start as that ayah ending (`PlayerProvider`).
 - Import alias: `@/*` → project root.
 - Code style: compact, small helpers, short doc comments that explain *why*; match the surrounding density.
 - The user wants ambiguities in requested changes raised **before** implementing.

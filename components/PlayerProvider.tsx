@@ -14,6 +14,15 @@ export const usePlayer = () => { const c = useContext(PlayerCtx); if (!c) throw 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const PRELOAD = 2; // how many ayahs ahead to load
 
+/** A reciter recorded one file per surah: the files and each ayah's start in ms (public/timings, see RECITERS). */
+type Timing = {u: string[]; t: number[][]};
+const timings = new Map<string, Promise<Timing>>();
+const loadTiming = (id: string) => {
+  if (!timings.has(id)) timings.set(id, fetch(`/timings/${id}.json`).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+    .catch(e => { timings.delete(id); throw e; }));
+  return timings.get(id)!;
+};
+
 export default function PlayerProvider({children}: {children: ReactNode}) {
   const {settings, update, toast} = useApp();
   const pathname = usePathname();
@@ -29,11 +38,16 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
   const [panel, setPanel] = useState(false);
   const [sleepLeft, setSleepLeft] = useState<string>(''); const sleepEnd = useRef(0); const sleepAfterAyah = useRef(false); const sleepTimer = useRef<ReturnType<typeof setInterval>>(undefined);
   const sRef = useRef(settings); sRef.current = settings;
+  // a surah-file reciter: the ayah plays by seeking inside its surah's file, and ends where the next ayah starts
+  const timing = useRef<Timing | null>(null);
+  const fileOf = (it: QItem) => timing.current ? timing.current.u[it.s - 1] : audioUrl(sRef.current.reciter, it.s, it.a, it.n);
+  const startOf = (it: QItem) => timing.current ? timing.current.t[it.s - 1][it.a - 1] / 1000 : 0;
+  const finish = useRef<() => void>(() => {});
 
   // load the next PRELOAD ayahs while this one plays; the browser keeps the files, so the next play starts at once
   const preloadAfter = (key: string) => {
     const i = queue.current.findIndex(q => q.key === key);
-    const urls = queue.current.slice(i + 1, i + 1 + PRELOAD).map(nx => audioUrl(sRef.current.reciter, nx.s, nx.a, nx.n));
+    const urls = [...new Set(queue.current.slice(i + 1, i + 1 + PRELOAD).map(fileOf))].filter(u => u !== audio.current?.getAttribute('src'));
     while (ahead.current.length < PRELOAD) ahead.current.push(Object.assign(new Audio(), {preload: 'auto', muted: true}));
     // keep a player that is already loading a wanted file; give the others the files still missing
     const free = ahead.current.filter(a => !urls.includes(a.getAttribute('src') || ''));
@@ -44,10 +58,18 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
     const it = queue.current.find(q => q.key === key); const el = audio.current; if (!it || !el) return;
     if (key !== curRef.current) setRep({...repRef.current, count: 1});
     curRef.current = key; setCur(key);
-    el.src = audioUrl(sRef.current.reciter, it.s, it.a, it.n);
-    el.defaultPlaybackRate = el.playbackRate = sRef.current.speed || 1;
-    el.play().catch(e => { if ((e as Error).name !== 'AbortError') toast('Could not play audio'); });
-    preloadAfter(key);
+    const rec = RECITERS.find(r => r.id === sRef.current.reciter);
+    const go = () => {
+      if (curRef.current !== key) return;
+      const url = fileOf(it), at = startOf(it);
+      if (el.getAttribute('src') !== url){ el.src = url; if (timing.current) el.addEventListener('loadedmetadata', () => { const c = item(curRef.current); if (c) el.currentTime = startOf(c); }, {once: true}); }
+      else if (timing.current && Math.abs(el.currentTime - at) > 0.3) el.currentTime = at;  // the next ayah of the same surah is already playing
+      el.defaultPlaybackRate = el.playbackRate = sRef.current.speed || 1;
+      el.play().catch(e => { if ((e as Error).name !== 'AbortError') toast('Could not play audio'); });
+      preloadAfter(key);
+    };
+    if (!rec?.timed){ timing.current = null; go(); }
+    else loadTiming(rec.timed).then(d => { timing.current = d; go(); }, () => toast('Could not load this reciter'));
     // long surahs render in batches: showAyah() renders the card first if it isn't on the page yet
     if (sRef.current.autoScroll) showAyah(key).then(el => el?.scrollIntoView({block: 'center', behavior: 'smooth'}));
   }, [toast]);
@@ -62,27 +84,43 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
   useEffect(() => {
     const el = new Audio(); el.preload = 'auto'; audio.current = el;
     const onPlay = () => setPlaying(true), onPause = () => setPlaying(false);
+    // an ayah has finished: from its own file's end, or (surah-file reciters) on reaching the next ayah's start
     const onEnded = () => {
-      const r = repRef.current, key = curRef.current;
-      if (sleepAfterAyah.current){ clearSleep(); toast('Sleep timer: stopped'); return; }
-      if (r.mode === 'ayah' && key && (r.times === 0 || r.count < r.times)){ setRep({...r, count: r.count + 1}); el.currentTime = 0; el.play(); return; }
+      const r = repRef.current, key = curRef.current, it = item(key);
+      // a surah file keeps playing past the ayah: stopping means pausing, back at the ayah's start for the next press
+      const halt = () => { if (timing.current && it){ el.pause(); el.currentTime = startOf(it); } };
+      if (sleepAfterAyah.current){ clearSleep(); halt(); toast('Sleep timer: stopped'); return; }
+      if (r.mode === 'ayah' && it && (r.times === 0 || r.count < r.times)){ setRep({...r, count: r.count + 1}); el.currentTime = startOf(it); el.play(); return; }
       if (r.mode === 'range' && key){
         if (key === r.to){
           if (r.times === 0 || r.loop < r.times){ setRep({...r, loop: r.loop + 1}); play(r.from); return; }
-          setRep({...r, loop: 1}); toast('Range finished'); return;
+          setRep({...r, loop: 1}); halt(); toast('Range finished'); return;
         }
         const nx = step(1); if (nx){ play(nx); return; }
       }
       const nx = sRef.current.autoPlay ? step(1) : undefined;
       if (nx) play(nx);
-      else if (sRef.current.autoPlay && onEnd.current){ pendingFirst.current = true; onEnd.current(); }
-      else if (sRef.current.autoPlay) toast('Finished');
+      else if (sRef.current.autoPlay && onEnd.current){ halt(); pendingFirst.current = true; onEnd.current(); }
+      else { halt(); if (sRef.current.autoPlay) toast('Finished'); }
     };
+    finish.current = onEnded;
     const onErr = () => { if (curRef.current && el.getAttribute('src')) toast('Audio not available for this ayah'); };
     el.addEventListener('play', onPlay); el.addEventListener('pause', onPause); el.addEventListener('ended', onEnded); el.addEventListener('error', onErr);
     return () => { el.pause(); el.removeEventListener('play', onPlay); el.removeEventListener('pause', onPause); el.removeEventListener('ended', onEnded); el.removeEventListener('error', onErr); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // surah-file reciters: watch for the next ayah's start (timeupdate fires only ~4 times a second)
+  useEffect(() => {
+    if (!playing) return;
+    const id = setInterval(() => {
+      const T = timing.current, it = item(curRef.current), el = audio.current;
+      if (!T || !it || !el || el.paused) return;
+      const end = T.t[it.s - 1][it.a];   // undefined for the surah's last ayah: the file's own end
+      if (end !== undefined && el.currentTime * 1000 >= end - 40) finish.current();
+    }, 80);
+    return () => clearInterval(id);
+  }, [playing]);
 
   // leaving a page stops audio (unless Mushaf is moving to the next page while reciting). The new page's setQueue can run
   // before this (children's effects first), so a hand-over it already made counts too
