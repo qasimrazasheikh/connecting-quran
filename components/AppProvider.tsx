@@ -58,7 +58,7 @@ export default function AppProvider({initial, hasCookie, surahs, children}: {ini
   useEffect(() => {
     const saved = store.get<Partial<Settings>>('settings', {});
     const merged = {...DEFAULT_SETTINGS, ...saved, ...(hasCookie ? Object.fromEntries(COOKIE_KEYS.map(k => [k, initial[k]])) : {})} as Settings;
-    if (!merged.tafsirs.includes('qe-urdu-junagarhi') && !store.get('qeAdded', false) && merged.tafsirs.length < 8){ merged.tafsirs = [...merged.tafsirs, 'qe-urdu-junagarhi']; }
+    if (!merged.tafsirs.includes('qe-urdu-junagarhi') && !store.get('qeAdded', false)){ merged.tafsirs = [...merged.tafsirs, 'qe-urdu-junagarhi']; }
     store.set('qeAdded', true);
     setSettings(merged); persist(merged);
     setBookmarks(store.get<Bookmark[]>('bookmarks', []));

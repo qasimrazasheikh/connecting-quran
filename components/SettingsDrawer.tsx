@@ -29,7 +29,6 @@ export default function SettingsDrawer() {
     set({trans: on ? [...S.trans, id] : S.trans.filter(x => x !== id)});
   };
   const toggleTaf = (slug: string, on: boolean) => {
-    if (on && S.tafsirs.length >= 8){ toast('Up to 8 tafseers'); return; }
     if (!on && S.tafsirs.length <= 1){ toast('Keep at least one tafseer'); return; }
     set({tafsirs: on ? [...S.tafsirs, slug] : S.tafsirs.filter(x => x !== slug)});
   };
@@ -96,7 +95,7 @@ export default function SettingsDrawer() {
           {by(langOf[2]).length ? by(langOf[2]).map(tafRow) : <p className="px-1 py-2 text-sm text-muted">No {langOf[1]} tafseers are available yet.</p>}
         </>}
       </div>
-      <p className="text-[13px] text-muted">The Study panel lists every tafseer in the chosen language; the ones you tick (up to 8) come first and open by themselves.</p>
+      <p className="text-[13px] text-muted">The Study panel lists every tafseer in the chosen language; the ones you tick come first and open by themselves.</p>
     </Drawer>
   );
 }
