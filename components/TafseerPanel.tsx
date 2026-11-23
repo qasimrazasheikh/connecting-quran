@@ -100,6 +100,18 @@ function TafsirSelect({value, list, picks, meta, onPick, label}: {value: string;
 }
 
 /**
+ * English spellings of Urdu/Arabic names vary (Kathir / Kaseer, Tafsir / Tafseer, Zilal / Zalul): compare their Latin
+ * consonants only, with th → s, dh → z, q → k and doubled letters merged. Word by word, so letters from neighbouring
+ * words can't line up; a key of two letters or fewer must start a word (else "israr" → "sr" sits inside "kaseer").
+ */
+const skel = (t: string) => t.split(/\s+/).map(w => w.replace(/[^a-z]/g, '').replace(/th/g, 's').replace(/dh/g, 'z')
+  .replace(/q/g, 'k').replace(/[aeiouy]/g, '').replace(/(.)\1+/g, '$1')).filter(Boolean);
+const loose = (hay: string, q: string) => {
+  const hw = skel(hay), qw = skel(q);
+  return qw.length > 0 && qw.every(k => hw.some(w => k.length > 2 ? w.includes(k) : w.startsWith(k)));
+};
+
+/**
  * The tafseers of one language as a reader: the reader's own list as chips across the top, the chosen tafseer below
  * like a book page with the previous / next tafseer at its foot. "+ more" opens every other tafseer with a filter;
  * Compare puts a second tafseer beside the first (stacked when the panel is narrow).
@@ -124,7 +136,12 @@ function Reader({s, a, lang, nav}: {s: number; a: number; lang: TLang; nav?: Nav
   const second = cmp && list.includes(cmp) && cmp !== cur ? cmp : list.find(x => x !== cur) || '';
   const rtl = lang !== 'en';
   const qq = q.trim().toLowerCase();
-  const others = list.filter(x => !picks.includes(x) && (!qq || `${meta(x)?.name} ${meta(x)?.author_name ?? ''} ${x}`.toLowerCase().includes(qq)));
+  const others = list.filter(x => {
+    if (picks.includes(x)) return false;
+    if (!qq) return true;
+    const hay = `${meta(x)?.name} ${meta(x)?.author_name ?? ''} ${meta(x)?.en ?? ''} ${x}`.toLowerCase();
+    return hay.includes(qq) || loose(hay, qq);
+  });
   const where = picks.includes(cur) ? `${picks.indexOf(cur) + 1} of ${picks.length} in your list` : `Other ${langText(lang)} tafseer`;
   const stepBtn = (x: string | undefined, dir: -1 | 1) => x
     ? <button className={cx(btnGhost, 'max-w-[48%] !px-3 !py-1.5')} data-t={dir < 0 ? 'prev' : 'next'} onClick={() => { show(x); document.querySelector('.tread')?.scrollIntoView({block: 'nearest'}); }}>

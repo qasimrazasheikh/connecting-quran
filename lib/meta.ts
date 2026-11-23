@@ -73,7 +73,8 @@ export const FALLBACK_TRANS: TransEdition[] = [
   {identifier:'en.asad',language:'en',englishName:'Muhammad Asad',direction:'ltr'},
 ];
 /** `site`/`url` mark a tafseer whose text our server pulls from another site's ayah page (url: pattern with {s}, {a}). */
-export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string; site?: string; url?: string};
+/** `en`: English title + author, for searching works shown in Urdu/Arabic script. */
+export type TafsirEdition = {slug: string; name: string; language_name: string; author_name?: string; site?: string; url?: string; en?: string};
 /** Sites whose ayah pages we can read (no API); QuranoHadith's page holds several works for the ayah. */
 export const isEql = (url: string) => url.startsWith('https://equranlibrary.com/');
 export const isQoh = (url: string) => url.startsWith('https://quranohadith.com/');

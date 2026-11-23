@@ -3,6 +3,7 @@ import {unstable_cache} from 'next/cache';
 import {API, REVALIDATE} from './config';
 import {catalogTafsirs, linkTafsirs} from './catalog';
 import {nativeName} from './tafsir-names';
+import {EQL_EN} from './eql-sources';
 import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
 import {SURAHS} from './surahs';
 import {cleanIP, fixTanzil, type QWord} from './text';
@@ -245,9 +246,21 @@ function getMorph(): Promise<Map<string, MSeg[]>> {
  * both (same language and name, e.g. Ibn Kathir) keeps only our copy, which loads faster.
  */
 export async function getTafsirEditions(): Promise<TafsirEdition[]> {
-  const [own, links] = await Promise.all([ownTafsirEditions(), linkTafsirs()]);
+  const [own, links, en] = await Promise.all([ownTafsirEditions(), linkTafsirs(), englishNames()]);
   const has = new Set(own.map(e => e.language_name.toLowerCase() + '|' + e.name));
-  return [...own, ...links.filter(e => !has.has(e.language_name.toLowerCase() + '|' + e.name))];
+  return [...own, ...links.filter(e => !has.has(e.language_name.toLowerCase() + '|' + e.name))]
+    .map(e => en[e.slug] ? {...e, en: en[e.slug]} : e);
+}
+/**
+ * English title + author by slug, so the tafseer list can be searched in English while it shows Urdu/Arabic names:
+ * the tafseer source's own (English) list, our eQuranLibrary list, and the few works named only here.
+ */
+async function englishNames(): Promise<Record<string, string>> {
+  const out: Record<string, string> = {...EQL_EN, [QE_SLUG]: 'Ahsan-ul-Bayan Hafiz Salahuddin Yusuf Muhammad Junagarhi',
+    qoh: 'More Urdu tafaseer QuranoHadith', 'link-quranohadith': 'More Urdu tafaseer QuranoHadith'};
+  try{ (await tafsirJSON<TafsirEdition[]>('/editions.json')).forEach(e => { out[e.slug] ??= `${e.name} ${e.author_name ?? ''}`.trim(); }); }
+  catch{ /* names in their own script still match */ }
+  return out;
 }
 async function ownTafsirEditions(): Promise<TafsirEdition[]> {
   const cat = await catalogTafsirs();
@@ -288,15 +301,27 @@ const fixSaadi = (t: string) => t
 
 /**
  * The tafseer part of an eQuranLibrary ayah page (the curator-approved link URL), as simple HTML paragraphs.
- * Their page has no API; the note is the `whitespace-pre-line` block in the section headed "Tafseer · <work>"
- * (pages with no note for the ayah have no such section).
+ * Their page has no API. Since their Nov 2026 redesign the note is the `text-urdu blocks` div (<p>s with <br>s) closing
+ * its section; before that it was a `whitespace-pre-line` div. Pages with no note for the ayah have neither.
+ * A note on a passage sits only on its first ayah; the other ayahs link there ("The commentary on this passage starts
+ * at ayah s:a"), so we follow that link (same work, earlier ayah, once) and say where the note starts.
  */
-export async function getEqlTafsir(url: string): Promise<string> {
-  const r = await fetch(url, {next: {revalidate: REVALIDATE}, signal: AbortSignal.timeout(15000)});
+export async function getEqlTafsir(url: string, follow = true): Promise<string> {
+  // their server sometimes doesn't answer a connection for 10 s ("fetch failed"); a second try usually gets through
+  const get = () => fetch(url, {next: {revalidate: REVALIDATE}, signal: AbortSignal.timeout(15000)});
+  const r = await get().catch(e => { if (e instanceof TypeError) return get(); throw e; });
   if (!r.ok) throw new HttpError(r.status, url);
-  const m = (await r.text()).match(/>Tafseer · [\s\S]*?<div class="[^"]*\bwhitespace-pre-line\b[^"]*">([\s\S]*?)<\/div>\s*<\/section>/);
-  if (!m) return '';
+  const html = await r.text();
+  const m = html.match(/<div class="[^"]*\b(?:blocks|whitespace-pre-line)\b[^"]*">([\s\S]*?)<\/div>\s*<\/section>/);
+  if (!m){
+    const [, work, s, a] = url.match(/^https:\/\/equranlibrary\.com\/tafseer\/([a-z0-9-]+)\/(\d+)\/(\d+)$/i) || [];
+    const p = work && html.match(new RegExp(`href="/tafseer/${work}/(\\d+)/(\\d+)"[^>]*>\\s*<span[^>]*>The commentary on this passage starts`));
+    if (!follow || !p || +p[1] !== +s! || +p[2] >= +a!) return '';
+    const note = await getEqlTafsir(`https://equranlibrary.com/tafseer/${work}/${p[1]}/${p[2]}`, false);
+    return note && `<p><i>(یہ تفسیر آیت ${p[1]}:${p[2]} سے شروع ہونے والے حصے کی ہے)</i></p>` + note;
+  }
   return paras(m[1]
+    .replace(/<\/p>\s*/g, '\n').replace(/<p\b[^>]*>/g, '')  // their paragraphs; paras() rebuilds them
     .replace(/<big>([\s\S]*?)<\/big>/g, '<b>$1</b>')   // headings like خلاصہ تفسیر (in a coloured span)
     .replace(/<\/?span\b[^>]*>/g, ''))                  // colour and Arabic-run spans; the client marks Quran runs itself
     .replace(/<p>(\d+)\s+/g, '<p><sup>$1</sup> ');      // footnote numbers opening a note (Usmani etc.)
