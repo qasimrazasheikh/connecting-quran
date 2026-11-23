@@ -124,7 +124,13 @@ export default function PlayerProvider({children}: {children: ReactNode}) {
 
   // leaving a page stops audio (unless Mushaf is moving to the next page while reciting). The new page's setQueue can run
   // before this (children's effects first), so a hand-over it already made counts too
-  useEffect(() => { if (!pendingFirst.current && !handedOver.current) stop(); handedOver.current = false; }, [pathname, stop]);
+  // The Mushaf rewrites its address as the reader scrolls from page to page: that isn't leaving it (its own jumps stop audio)
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    const was = lastPath.current; lastPath.current = pathname;
+    if (!(was?.startsWith('/mushaf') && pathname?.startsWith('/mushaf')) && !pendingFirst.current && !handedOver.current) stop();
+    handedOver.current = false;
+  }, [pathname, stop]);
   // stable, so pages don't re-send their queue whenever play/pause changes (which could use up a pending hand-over)
   const setQueue = useCallback((q: QItem[], opts?: {onEnd?: () => void}) => {
     queue.current = q; onEnd.current = opts?.onEnd;

@@ -127,14 +127,17 @@ ok(new URL(p.url()).pathname === '/mushaf/604', "surah box on the Mushaf opens t
 await go('/juz/1');
 ok(await p.locator('article.ayah').count() === 4 && (await p.locator('main').innerText()).includes('2. Al-Baqarah'), 'juz with surah headings');
 await go('/mushaf/2'); await p.waitForSelector('.mayah');
-ok(await p.locator('.mayah').count() === 3 && await p.locator('.mtitle').count() === 1, 'mushaf page');
-await p.locator('.mayah .endmark').first().click(); await p.waitForSelector('#mMenu');
+ok(await p.locator('#mp-2 .mayah').count() === 3 && await p.locator('#mp-2 .mtitle').count() === 1, 'mushaf page');
+await p.locator('#mp-2 .mayah .endmark').first().click(); await p.waitForSelector('#mMenu');
 ok((await p.locator('#mMenu').innerText()).includes('1:7'), 'ayah menu');
 await shot('mushaf');
 await p.click('#mMenu [data-m=tafsir]'); await p.waitForSelector('#tafDrawer .tread'); await p.keyboard.press('Escape');
-await p.click('#mNext'); await p.waitForURL('**/mushaf/3'); await p.waitForSelector('.mayah');
-ok(await p.locator('.mayah').count() === 2, 'next page');
-await p.keyboard.press('ArrowRight'); await p.waitForURL('**/mushaf/2'); ok(true, 'arrow key turns page');
+await p.waitForSelector('#mp-3 .mayah');   // the next page loads below by itself
+ok(await p.locator('#mp-3 .mayah').count() === 2, 'endless scroll loads the next page');
+// the mock's pages are short, so which page is "in view" depends on the window; the keys move one page from there
+const inView = +new URL(p.url()).pathname.split('/')[2];
+await p.keyboard.press('ArrowLeft'); await p.waitForURL(`**/mushaf/${inView + 1}`); ok(true, 'arrow key moves a page on, and the address follows');
+await p.keyboard.press('ArrowRight'); await p.waitForURL(`**/mushaf/${inView}`); ok(true, 'arrow key moves a page back');
 await go('/surah/2/5'); await p.waitForSelector('#a-2-5');
 await p.locator('header a', {hasText: 'Mushaf'}).first().click(); await p.waitForURL('**/mushaf/2'); await p.waitForSelector('.mayah');
 ok(await p.locator('.mayah.sel[data-key="2:1"]').count() === 1, 'Mushaf link opens at the surah start with its first ayah highlighted');
