@@ -65,6 +65,7 @@ export default async function RootLayout({children}: LayoutProps<'/'>) {
               Uthmani Quran font by the King Fahd Glorious Quran Printing Complex; Indo-Pak Quran font by Ayman Siddiqui (QuranWBW); surah-name calligraphy font from Quran.com; Urdu font Mehr Nastaliq Web by <a href="https://mehrtype.blogspot.com/" target="_blank" rel="noopener">Mehr Type</a> and CSaLT, ITU Punjab (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>).
               Tafseer loads from the open-source tafsir_api project and QuranEnc (Rowwad Translation Center).
               Word grammar: <a href="https://corpus.quran.com" target="_blank" rel="noopener">Quranic Arabic Corpus</a> (GNU GPL).
+              {' '}<a href="/privacy">Privacy</a>
             </footer>
             <SettingsDrawer />
             <TafseerDrawer />

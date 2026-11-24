@@ -100,6 +100,8 @@ const TWINS: [string, string][] = [['tafsir-fe-zalul-quran-syed-qatab', 'ur-tafs
   ['tazkiru-quran-ur', 'ur-tazkirul-quran'], ['tazkirul-quran-en', 'en-tazkirul-quran']];
 export const tafsirTwin = (slug: string) => TWINS.find(t => t.includes(slug))?.find(x => x !== slug);
 export const TAFSIR_RENAME: Record<string, string> = {'tafseer-ibn-e-kaseer-urdu':'Tafsir Ibn Kathir (fuller version)','tafsir-al-jalalayn':'Tafsir Al Jalalayn (alt. English)'};
+/** The oldest mobile app version /api/v1 still serves correctly; raise it when a change would break older installs. */
+export const MIN_APP_VERSION = '1.0.0';
 export const QUIZ_PART = 30;
 export const QUIZ_LEN = 10;
 export const langLabel = (l?: string) => ({english:'English', urdu:'Urdu', arabic:'Arabic'} as Record<string, string>)[(l || '').toLowerCase()] || l || '';

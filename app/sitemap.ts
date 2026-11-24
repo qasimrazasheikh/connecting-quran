@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const u = (path: string, priority?: number): MetadataRoute.Sitemap[number] => ({url: SITE + path, ...(priority ? {priority} : {})});
   const range = (n: number) => Array.from({length: n}, (_, i) => i + 1);
   return [
-    u('/', 1), u('/juz', 0.6), u('/quiz', 0.5), u('/search', 0.5), u('/mushaf/1', 0.6),
+    u('/', 1), u('/juz', 0.6), u('/quiz', 0.5), u('/search', 0.5), u('/mushaf/1', 0.6), u('/privacy', 0.2),
     ...SURAHS.map(s => u(`/surah/${s.n}`, 0.9)),
     ...range(30).map(j => u(`/juz/${j}`, 0.7)),
     ...range(604).map(p => u(`/mushaf/${p}`, 0.5)),

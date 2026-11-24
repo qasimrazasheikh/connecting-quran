@@ -206,6 +206,19 @@ ok(await p.locator('[data-del]').count() === 1, 'bookmark saved');
 await go('/'); await p.waitForSelector('text=Continue reading'); ok(true, 'continue reading');
 await go('/#/surah/2/7'); await p.waitForURL('**/surah/2/7'); ok(true, 'old #/ links redirect');
 
+console.log('# app API (/api/v1), privacy, app links');
+const getJ = async u => { const r = await p.request.get(BASE + u); return {status: r.status(), body: r.ok() ? await r.json() : null}; };
+const meta = (await getJ('/api/v1/meta')).body;
+ok(meta?.minAppVersion && meta.translations.length >= 4, 'meta: version and translations', meta?.translations.length);
+ok(meta?.tafsirs.length > 0 && meta.tafsirs.every(t => ['tafsir', 'qoh'].includes(t.route)), 'meta: tafseers with a route', meta?.tafsirs.length);
+ok(meta?.reciters.length >= 20 && meta.reciters.every(r => r.audio || r.timings), 'meta: every reciter playable', meta?.reciters.length);
+const sahih = (await getJ('/api/v1/translation/en.sahih/1')).body;
+ok(sahih?.ayahs.length === 7 && !sahih.ayahs.some(t => t.includes('<')), 'translation: Al-Fatihah, footnote tags removed');
+ok((await getJ('/api/v1/translation/ur.maududi/112')).body?.ayahs.length === 4, 'translation: AlQuran Cloud edition');
+ok((await getJ('/api/v1/translation/xx.fake/1')).status === 404 && (await getJ('/api/v1/translation/en.sahih/115')).status === 404, 'translation: unknown id or surah is 404');
+ok((await getJ('/.well-known/assetlinks.json')).body?.[0]?.target.package_name === 'com.connectingquran.app', 'android app-links file');
+await go('/privacy'); ok(await p.locator('h1', {hasText: 'Privacy'}).count() === 1, 'privacy page');
+
 console.log('# mobile');
 await p.setViewportSize({width: 390, height: 820});
 for (const u of ['/', '/surah/2', '/mushaf/2', '/tafseer/2/3', '/quiz/2/1']){

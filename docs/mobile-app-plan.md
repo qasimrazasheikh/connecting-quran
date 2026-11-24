@@ -34,6 +34,15 @@ Draft for review, 2026-11-08. Nothing is built yet. Section 1 lists the decision
   - **Offline:** what you read stays available, and full surah download is in v1.
   - **Accounts and sync:** none in v1; everything stays on the phone.
   - **Money:** free, no ads. Any "Support us" link opens the website.
+- **eQuranLibrary and QuranoHadith tafseers in v1** (2026-11-24), subject to their permission (`docs/mobile-permissions.md`).
+- **Phase 1 design (2026-11-24): the Arabic and word data ship in the app; everything else comes from the site.**
+  - `GET /api/v1/meta`: the catalogue of translations, tafseers (each with its route), reciters (audio address patterns,
+    or timing files for the surah-file reciters) and `minAppVersion`.
+  - `GET /api/v1/translation/{id}/{surah}`: one translation of one surah.
+  - Tafseer keeps using `/api/tafsir/...` and `/api/qoh/...`.
+  - The planned surah, juz, page and ayah endpoints aren't needed while the Arabic ships with the app.
+  - The site also gains `/privacy` and `/.well-known/assetlinks.json` (Android app links, with the EAS signing key's fingerprint;
+    Google Play's re-signing key and the iOS file come later).
 - **Testing without Expo Go:** before going public, the user tests an installable Android build (APK) that runs anywhere, without the PC.
 
 - **Design: Option A, Midnight (chosen 2026-11-08).** The app looks like the website:
