@@ -14,6 +14,9 @@ function Lbl({t}: {t: string}) {
 }
 const POS_BORDER: Record<string, string> = {V: 'border-l-[#2a7de1]', N: 'border-l-[#0f6b4f]', P: 'border-l-[#b8892b]'};
 
+/** Room the card needs to show without scrolling (grammar included), and the tallest it may get. */
+const FULL = 560, TALL = 680;
+
 export default function WordCard() {
   const {word, closeWord, settings, toast} = useApp();
   const [info, setInfo] = useState<WordInfo | null>(null);
@@ -34,16 +37,25 @@ export default function WordCard() {
   }, [word]);
 
   // place next to the word on wide screens (phones get a bottom sheet from CSS). The side is chosen once, when the card
-  // opens: below the word if there's room for the full card, else whichever side has more. The card is pinned to the
-  // word's edge and grows away from it, so it doesn't jump when the grammar arrives and the card gets taller.
+  // opens: below the word if there's room for the full card, else above it if there's room there. When neither has room
+  // (a word low on a wide screen) it goes beside the word, on the roomier side, with nearly the full height. The card is
+  // pinned to the word's edge and grows away from it, so it doesn't jump when the grammar arrives and the card gets taller.
   useLayoutEffect(() => {
     const el = box.current; if (!el || !word) return;
     const s = el.style;
     if (innerWidth <= 760){ s.top = s.bottom = s.left = s.maxHeight = ''; return; }
-    const r = word.rect, below = innerHeight - r.bottom - 16, above = r.top - 70 - 8; // 70: the sticky header
-    if (below >= 420 || below >= above){ s.top = r.bottom + 8 + 'px'; s.bottom = ''; s.maxHeight = Math.min(below, 560) + 'px'; }
-    else { s.bottom = innerHeight - r.top + 8 + 'px'; s.top = ''; s.maxHeight = Math.min(above, 560) + 'px'; }
-    s.left = Math.max(8, Math.min(r.left + r.width / 2 - el.offsetWidth / 2, innerWidth - el.offsetWidth - 8)) + 'px';
+    const r = word.rect, w = el.offsetWidth, HEAD = 78; // the sticky header and a gap
+    const below = innerHeight - r.bottom - 16, above = r.top - HEAD, left = r.left - 12, right = innerWidth - r.right - 12;
+    const center = () => Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8)) + 'px';
+    if (below >= FULL){ s.top = r.bottom + 8 + 'px'; s.bottom = ''; s.maxHeight = Math.min(below, TALL) + 'px'; s.left = center(); }
+    else if (above >= FULL){ s.bottom = innerHeight - r.top + 8 + 'px'; s.top = ''; s.maxHeight = Math.min(above, TALL) + 'px'; s.left = center(); }
+    else if (Math.max(left, right) >= w){
+      const top = Math.max(HEAD, Math.min(r.top - 120, innerHeight - 16 - TALL));
+      s.top = top + 'px'; s.bottom = ''; s.maxHeight = Math.min(innerHeight - top - 16, TALL) + 'px';
+      s.left = (right >= left ? r.right + 12 : r.left - 12 - w) + 'px';
+    }
+    else if (below >= above){ s.top = r.bottom + 8 + 'px'; s.bottom = ''; s.maxHeight = Math.min(below, TALL) + 'px'; s.left = center(); }
+    else { s.bottom = innerHeight - r.top + 8 + 'px'; s.top = ''; s.maxHeight = Math.min(above, TALL) + 'px'; s.left = center(); }
   }, [word]);
 
   // click outside closes (a click on another word opens that word instead)
@@ -72,7 +84,7 @@ export default function WordCard() {
   const {s, a} = word, w = info?.w || word.w || 0;
   return (
     <div ref={box} id="wcard" role="dialog" aria-label="Word grammar"
-      className="fixed z-45 max-h-[min(70vh,560px)] w-[min(380px,calc(100%-16px))] overflow-auto rounded-[14px] border border-line bg-surface p-3.5 shadow-[0_12px_40px_rgba(0,0,0,.22)] max-[760px]:inset-x-2 max-[760px]:bottom-2 max-[760px]:max-h-[65vh] max-[760px]:w-auto">
+      className="fixed z-45 max-h-[min(88vh,680px)] w-[min(440px,calc(100%-16px))] overflow-auto rounded-[14px] border border-line bg-surface p-3.5 shadow-[0_12px_40px_rgba(0,0,0,.22)] max-[760px]:inset-x-2 max-[760px]:bottom-2 max-[760px]:max-h-[65vh] max-[760px]:w-auto">
       <div className="flex items-start gap-2.5">
         <div className="min-w-0 flex-1">
           <div className="font-q text-[38px] leading-normal text-brand" dir="rtl" style={word.font ? {fontFamily: word.font} : undefined}>{word.text}</div>
