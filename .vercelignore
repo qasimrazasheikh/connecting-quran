@@ -1,0 +1,2 @@
+# The mobile app (Expo) is built separately with EAS; the website deploy doesn't need it
+/mobile
