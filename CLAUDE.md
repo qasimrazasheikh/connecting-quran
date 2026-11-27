@@ -19,7 +19,7 @@ npx tsc --noEmit             # type check (there is no lint script)
 npm run db:generate          # after editing lib/db/schema.ts: write a migration into drizzle/
 npm run db:migrate           # apply migrations to DATABASE_URL
 npm run db:seed              # fill the catalogue from the current sources (re-runnable; never overwrites curator edits)
-npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah JSON in data/qul/ (download needs a QUL login; not committed)
+npm run db:import-related    # (re)load related ayahs from QUL's matching-ayah JSON in data/qul/ (not shown on the site at the moment; kept for later)
 node scripts/split-morph.mts # regenerate data/morph/<s>.json (word grammar, one file per surah) from the corpus file
 node scripts/audio-timings.mts # regenerate public/timings/<id>.json (ayah start times for reciters recorded one file per surah)
 ```
@@ -48,7 +48,7 @@ new external call, add a matching mock route there or the e2e run will break.
 
 - `app/` — one folder per URL (`/surah/[n]/[[...ayah]]`, `/juz/[j]`, `/mushaf/[[...p]]`, `/tafseer/[s]`, `/videos/[s]`,
   `/search`, `/quiz/[s]`, `/bookmarks`) plus browser-facing API routes in `app/api/` (`editions`, `tafsir/[slug]/[s]/[a]` (an `eql-*` slug = the note pulled from that approved eQuranLibrary link's page; approved eQuranLibrary/QuranoHadith link sources are listed with the tafseers, `linkTafsirs()`, minus works we already carry under the same name), `qoh/[s]/[a]` (QuranoHadith's page split per work),
-  `word/[s]/[a]`, `search`, `quiz/[s]`, `study/[s]/[a]` = links + videos + related count for the Study panel, `related/[s]/[a]` = related ayahs with shared words marked) that proxy the external sources through `lib/quran.ts`.
+  `word/[s]/[a]`, `search`, `quiz/[s]`, `study/[s]/[a]` = links + videos for the Study panel) that proxy the external sources through `lib/quran.ts`.
 - `components/` — almost all are client components. `AppProvider` owns settings, bookmarks, toasts and the open
   drawers/panels (settings, tafseer, word card); `PlayerProvider` owns the audio player. Both are mounted in `app/layout.tsx`.
   `resume.ts` keeps the last-read ayah so Mushaf and Tafseer can open where the reader left off.
@@ -61,7 +61,7 @@ new external call, add a matching mock route there or the e2e run will break.
     values (`enums.ts`, safe to import in client code).
   - `catalog.ts` — **server only**. Reads approved catalogue rows (60 s in-memory cache, cleared by admin actions);
     returns null without a database so callers fall back to the built-in lists in `meta.ts`.
-  - `step.ts` also defines the Study panel tabs (`StudyTab`, `studyHref`): text and related live on `/tafseer/s/a[?tab=…]`, videos on `/videos/s/a`.
+  - `step.ts` also defines the Study panel tabs (`StudyTab`, `studyHref`): text lives on `/tafseer/s/a`, videos on `/videos/s/a`.
   - `admin-auth.ts` — curator session (signed httpOnly cookie on `/admin`, signature includes the password).
   - `config.ts` — external API base URLs (each overridable by env var, see `.env.example`) and `REVALIDATE` (24 h).
   - `quran.ts` — **server only**. Every external fetch goes through `getJSON` here and is cached with `next.revalidate`.

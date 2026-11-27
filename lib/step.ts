@@ -1,7 +1,8 @@
 import type {SurahInfo} from './quran';
-/** Study panel tabs. Videos keep their own address; other tabs are a ?tab= on the tafseer page. */
-export type StudyTab = 'text' | 'videos' | 'related';
-export const STUDY_TABS: StudyTab[] = ['text', 'videos', 'related'];
+/** Study panel tabs. Videos keep their own address; the text is the tafseer page itself. (Related ayahs were taken out
+ *  on the user's request; their data stays in the database, and old ?tab=related links open the text.) */
+export type StudyTab = 'text' | 'videos';
+export const STUDY_TABS: StudyTab[] = ['text', 'videos'];
 export const studyHref = (t: StudyTab, s: number, a: number) => t === 'videos' ? `/videos/${s}/${a}` : `/tafseer/${s}/${a}${t === 'text' ? '' : `?tab=${t}`}`;
 /** The ayah before/after s:a across surah boundaries (null at the ends). */
 export function stepAyah(surahs: SurahInfo[], s: number, a: number, dir: number): {s: number; a: number} | null {

@@ -3,8 +3,8 @@ import {useEffect, useMemo, useState, type ReactNode} from 'react';
 import {useApp} from './AppProvider';
 import {Icon} from './Icons';
 import Link from 'next/link';
-import {getEditions, getQoh, getRelated, getStudy, getTafsir, type QohTafsir, type Study} from '@/lib/client-data';
-import type {RelatedItem, VideoCard} from '@/lib/catalog';
+import {getEditions, getQoh, getStudy, getTafsir, type QohTafsir, type Study} from '@/lib/client-data';
+import type {VideoCard} from '@/lib/catalog';
 import {isQoh, tafsirTwin, type TafsirEdition} from '@/lib/meta';
 import type {StudyTab} from '@/lib/step';
 import {tafsirHtml} from '@/lib/tafsir-client';
@@ -274,41 +274,7 @@ function QohTafsirs({s, a}: {s: number; a: number}) {
   );
 }
 
-/** Ayahs that share wording with this one, closest first, with the shared words marked. Loaded when the tab opens. */
-function RelatedAyahs({s, a, count}: {s: number; a: number; count?: number}) {
-  const {settings} = useApp();
-  const [items, setItems] = useState<RelatedItem[] | null>(null);
-  const [err, setErr] = useState('');
-  useEffect(() => {
-    if (count === 0) return;
-    let live = true; setItems(null); setErr('');
-    getRelated(s, a, settings.script === 'indopak').then(v => { if (live) setItems(v); }, e => { if (live) setErr(e.message); });
-    return () => { live = false; };
-  }, [s, a, count, settings.script]);
-  if (count === 0) return <div className={empty}>No other ayah shares closely similar wording with {s}:{a}.</div>;
-  if (err) return <div className={empty}>Related ayahs could not load. {err}</div>;
-  if (!items) return <div className="grid place-items-center py-10"><div className="spin" /></div>;
-  return (
-    <div>
-      <p className="mb-3 text-[13px] text-muted">{items.length} ayah{items.length === 1 ? '' : 's'} with similar wording to {s}:{a} · shared words are highlighted</p>
-      <div className="grid gap-2.5">
-        {items.map(r => (
-          <article key={`${r.s}:${r.a}`} className="rounded-xl border border-line bg-surface px-3.5 py-3">
-            <div className="mb-1 flex items-center gap-2 text-[13px]">
-              <span className="min-w-0 flex-1"><b className="text-ink">{r.sname} {r.s}:{r.a}</b> <span className="whitespace-nowrap text-muted">· {r.words} shared word{r.words === 1 ? '' : 's'}</span></span>
-              <span className="flex flex-none"><Link className={abtn} href={`/surah/${r.s}/${r.a}`}>Read</Link><Link className={abtn} href={`/tafseer/${r.s}/${r.a}`}>Tafseer</Link></span>
-            </div>
-            <div className={cx('q-ar related-ar', r.ip && 'is-ip')} dir="rtl">
-              {r.toks.map((t, i) => <span key={i}>{i ? ' ' : ''}{t.hit ? <mark>{t.t}</mark> : t.t}</span>)}
-            </div>
-          </article>))}
-      </div>
-      <p className="mt-3 text-[12px] text-muted">Similar-wording data: Quranic Universal Library (Tarteel).</p>
-    </div>
-  );
-}
-
-/** Study panel for one ayah (drawer and tafseer page): tafseer text, video lectures, related ayahs. */
+/** Study panel for one ayah (drawer and tafseer page): tafseer text and video lectures. */
 export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: number; tab?: StudyTab; onTab?: (t: StudyTab) => void; nav?: Nav}) {
   const {settings, update, surahs, tafTab: ctxTab, setTafTab} = useApp();
   const tafTab = tab ?? ctxTab;
@@ -321,7 +287,7 @@ export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: num
   const [firstLang, setFirstLang] = useState<TLang>('ur');
   useEffect(() => { getEditions().then(d => { const n = d.tafsir.find(e => e.slug === settings.tafsirs[0])?.language_name.toLowerCase(); const l = TLANGS.find(x => x[2] === n); if (l) setFirstLang(l[0]); }, () => {}); }, [settings.tafsirs]);
   const lang: TLang = settings.tafLang || firstLang;
-  useEffect(() => { let live = true; setStudy(null); getStudy(s, a).then(d => { if (live) setStudy(d); }, () => { if (live) setStudy({videos: [], related: 0}); }); return () => { live = false; }; }, [s, a]);
+  useEffect(() => { let live = true; setStudy(null); getStudy(s, a).then(d => { if (live) setStudy(d); }, () => { if (live) setStudy({videos: []}); }); return () => { live = false; }; }, [s, a]);
   return (
     <div>
       <div className="mb-2.5 flex items-center gap-2">
@@ -334,11 +300,9 @@ export default function TafseerPanel({s, a, tab, onTab, nav}: {s: number; a: num
       <div className="mb-3 flex overflow-x-auto border-b border-line [scrollbar-width:none] sm:gap-1">
         <button data-tab="text" className={tabBtn(tafTab === 'text')} onClick={() => pick('text')}><Icon.book className="max-sm:hidden" /> Tafseer</button>
         <button data-tab="videos" className={tabBtn(tafTab === 'videos')} onClick={() => pick('videos')}><Icon.yt className="max-sm:hidden" /> <span className="max-sm:hidden">Video lectures</span><span className="sm:hidden">Videos</span> {count(study?.videos.length)}</button>
-        <button data-tab="related" className={tabBtn(tafTab === 'related')} onClick={() => pick('related')}><Icon.repeat className="max-sm:hidden" /> Related {count(study?.related)}</button>
       </div>
       {nav && tafTab !== 'text' && <div className="mb-2 flex justify-end gap-1 sm:hidden">{nav(true)}</div>}
       {tafTab === 'videos' ? <VideoCards videos={study?.videos ?? null} sname={sname} />
-        : tafTab === 'related' ? <RelatedAyahs s={s} a={a} count={study?.related} />
         : <Reader s={s} a={a} lang={lang} nav={nav} />}
     </div>
   );
