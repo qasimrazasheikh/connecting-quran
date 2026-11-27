@@ -4,7 +4,8 @@ import {ActivityIndicator, Pressable, ScrollView, Switch, Text, View} from 'reac
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {arFont, arText} from '@/components/AyahCard';
 import {Icon, T} from '@/components/ui';
-import {endMark, RECITERS, surahInfo, useSurah} from '@/lib/data';
+import {useReciter} from '@/lib/api';
+import {endMark, surahInfo, useSurah} from '@/lib/data';
 import {usePlayer} from '@/lib/player';
 import {useApp} from '@/lib/store';
 import {F} from '@/lib/theme';
@@ -19,12 +20,12 @@ export default function Player(){
   const insets = useSafeAreaInsets();
   const cur = p.cur ?? {s: 1, a: 1};
   const ayah = useSurah(cur.s)?.[cur.a - 1], total = surahInfo(cur.s).ayahs;
-  const reciter = RECITERS.find(r => r.id === st.reciter)!;
+  const reciter = useReciter(st.reciter);
   const opts: {value: string; label: string; on: boolean; press: () => void}[] = [
     {value: `${st.speed}×`, label: 'Speed', on: st.speed !== 1, press: () => set({speed: cycle([0.75, 1, 1.25, 1.5], st.speed)})},
     {value: p.repeat === 1 ? 'Off' : `${p.repeat}×`, label: 'Repeat ayah', on: p.repeat > 1, press: () => p.setRepeat(cycle([1, 3, 5], p.repeat))},
     {value: p.sleep ? `${p.sleep}m` : 'Off', label: 'Sleep timer', on: !!p.sleep, press: () => p.setSleep(cycle([0, 15, 30, 60], p.sleep))},
-    {value: reciter.name.split(' ')[0], label: 'Reciter', on: false, press: () => set({reciter: cycle(RECITERS.map(r => r.id), st.reciter)})},
+    {value: reciter.name.split(' ')[0], label: 'Reciter', on: false, press: () => router.push('/settings')},
   ];
 
   return (

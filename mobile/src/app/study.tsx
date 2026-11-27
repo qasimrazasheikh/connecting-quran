@@ -15,7 +15,7 @@ export default function Study(){
   if (seen !== `${last.s}:${last.a}`){ setSeen(`${last.s}:${last.a}`); setAt(last); }
   return (
     <View style={{flex: 1, backgroundColor: t.bg}}>
-      <TafseerView s={at.s} a={at.a} top={insets.top + 12} onStep={a => setAt({...at, a})} />
+      <TafseerView s={at.s} a={at.a} top={insets.top + 8} onGo={(s, a) => setAt({s, a, at: Date.now()})} />
     </View>
   );
 }

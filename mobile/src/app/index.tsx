@@ -1,10 +1,13 @@
-/** Home: continue reading, find a surah, the surah list. */
+/**
+ * Home: continue reading (the Mushaf page last read, with the reader's place in a slim row under it; the reader's place
+ * alone until the Mushaf has been opened), find a surah, the surah list.
+ */
 import {Redirect, router} from 'expo-router';
 import {useMemo, useState} from 'react';
 import {FlatList, Pressable, Text, TextInput, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Icon, IconBtn, Segmented, T} from '@/components/ui';
-import {juzStart, SURAHS, surahInfo, type SurahInfo} from '@/lib/data';
+import {juzStart, PAGE_COUNT, pageRuns, SURAHS, surahInfo, type SurahInfo} from '@/lib/data';
 import {ago, useApp} from '@/lib/store';
 import {openAyah} from '@/lib/nav';
 import {F} from '@/lib/theme';
@@ -18,11 +21,13 @@ export default function HomeRoute(){
 }
 
 function Home(){
-  const {t, history} = useApp();
+  const {t, history, mushaf} = useApp();
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState('');
   const [mode, setMode] = useState<'surah' | 'juz'>('surah');
   const last = history[0];
+  const mp = mushaf?.p, ms = mp ? pageRuns(mp)[0]?.[0] ?? 1 : 1;
+  const openPage = (p: number) => router.push({pathname: '/page', params: {p}});
 
   const list = useMemo(() => {
     const v = q.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -41,6 +46,36 @@ function Home(){
         <IconBtn name="sliders" label="Settings" bordered onPress={() => router.push('/settings')} />
       </View>
 
+      {mp ? <>
+        <Pressable onPress={() => openPage(mp)} style={{padding: 18, borderRadius: 20, backgroundColor: t.hero, gap: 10}}>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+            <T size={12} w="sb" c="#f6cf6a" style={{letterSpacing: 1}}>CONTINUE IN THE MUSHAF</T>
+            <T size={12} c={t.heroMuted}>{ago(mushaf!.at)}</T>
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'}}>
+            <View>
+              <T size={22} w="b" c={t.heroText}>{surahInfo(ms).en}</T>
+              <T size={14} c={t.heroMuted}>Page {mp} of {PAGE_COUNT}</T>
+            </View>
+            <Text style={{fontFamily: F.names, fontSize: 44, color: '#f6cf6a', includeFontPadding: false}}>{p3(ms)}</Text>
+          </View>
+          <View style={{height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden'}}>
+            <View style={{width: `${Math.max(1, Math.round(mp / PAGE_COUNT * 100))}%`, height: '100%', backgroundColor: '#f4c04e'}} />
+          </View>
+          <View style={{alignSelf: 'flex-start', height: 40, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#f4c04e', flexDirection: 'row', alignItems: 'center', gap: 6}}>
+            <T size={14} w="sb" c="#0b0d1d">Resume</T><Icon name="arrow" size={16} color="#0b0d1d" />
+          </View>
+        </Pressable>
+        {last && <Pressable onPress={() => openAyah(last.s, last.a)} style={{marginTop: -6, flexDirection: 'row', alignItems: 'center', gap: 12, height: 56, paddingHorizontal: 14,
+          borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.surface}}>
+          <Icon name="book" size={20} color={t.brand} />
+          <View style={{flex: 1}}>
+            <T size={12} c={t.muted}>Continue in reader · {ago(last.at)}</T>
+            <T size={15} w="sb" lines={1}>{surahInfo(last.s).en} {last.s}:{last.a}</T>
+          </View>
+          <Icon name="arrow" size={18} color={t.brand} />
+        </Pressable>}
+      </> : (
       <Pressable onPress={() => openAyah(last?.s ?? 1, last?.a)} style={{padding: 18, borderRadius: 20, backgroundColor: t.hero, gap: 10}}>
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
           <T size={12} w="sb" c="#f6cf6a" style={{letterSpacing: 1}}>{last ? 'CONTINUE READING' : 'START READING'}</T>
@@ -60,6 +95,7 @@ function Home(){
           <T size={14} w="sb" c="#0b0d1d">{last ? 'Resume' : 'Open Al-Fatihah'}</T><Icon name="arrow" size={16} color="#0b0d1d" />
         </View>
       </Pressable>
+      )}
 
       <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.surface}}>
         <Icon name="search" size={18} color={t.muted} />

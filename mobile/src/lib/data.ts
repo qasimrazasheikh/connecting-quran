@@ -123,22 +123,10 @@ export function wordTokens(text: string, count: number): string[] | null {
   return out.length === count ? out : null;
 }
 
-export const TAFSIRS = [
-  {slug: 'ur-tafseer-ibn-e-kaseer', name: 'تفسیر ابن کثیر', author: 'حافظ ابن کثیر', lang: 'ur'},
-  {slug: 'tafsir-bayan-ul-quran', name: 'بیان القرآن', author: 'ڈاکٹر اسرار احمد', lang: 'ur'},
-  {slug: 'en-tafisr-ibn-kathir', name: 'Ibn Kathir', author: 'Hafiz Ibn Kathir', lang: 'en'},
-  {slug: 'en-tafsir-maarif-ul-quran', name: "Ma'arif al-Qur'an", author: 'Mufti Muhammad Shafi', lang: 'en'},
-] as const;
-export const SITE = 'https://www.connectingquran.com';
-
-export const RECITERS = [
-  {id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', br: 128},
-  {id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', br: 192},
-  {id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', br: 128},
-  {id: 'ar.mahermuaiqly', name: 'Maher Al-Muaiqly', br: 128},
-];
-/** Per-ayah recitation files on the same CDN the website uses; `n` is the ayah's number in the whole Quran. */
-export const audioUrl = (reciter: string, n: number) => {
-  const r = RECITERS.find(x => x.id === reciter) ?? RECITERS[0];
-  return `https://cdn.islamic.network/quran/audio/${r.br}/${r.id}/${n}.mp3`;
-};
+/** The ayah before/after s:a, across surah boundaries (null before 1:1 and after 114:6). */
+export function stepAyah(s: number, a: number, dir: 1 | -1): {s: number; a: number} | null {
+  a += dir;
+  if (a < 1){ if (--s < 1) return null; a = surahInfo(s).ayahs; }
+  else if (a > surahInfo(s).ayahs){ if (++s > 114) return null; a = 1; }
+  return {s, a};
+}

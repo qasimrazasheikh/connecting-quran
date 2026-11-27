@@ -1,15 +1,18 @@
 /** Settings with a live preview: script, sizes, translations, word by word, reciter, colours, theme. */
 import {Pressable, ScrollView, Switch, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {arFont, arText} from '@/components/AyahCard';
+import {arFont, arText, TransText} from '@/components/AyahCard';
 import {Icon, Segmented, T, TopBar} from '@/components/ui';
-import {endMark, FATIHAH, RECITERS} from '@/lib/data';
+import {useMeta} from '@/lib/api';
+import {endMark, FATIHAH} from '@/lib/data';
 import {DEFAULTS, useApp, type Settings} from '@/lib/store';
 import {F, PALETTES, theme} from '@/lib/theme';
 
 export default function SettingsScreen(){
   const {t, settings: st, set} = useApp();
   const insets = useSafeAreaInsets();
+  const meta = useMeta();
+  const flipTr = (id: string) => set({trans: st.trans.includes(id) ? st.trans.filter(x => x !== id) : [...st.trans, id]});
   const sample = FATIHAH[1];
   const card = {padding: 14, paddingVertical: 4, borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line} as const;
   const row = {flexDirection: 'row', alignItems: 'center', minHeight: 56, borderBottomWidth: 1, borderBottomColor: t.surface2, gap: 12} as const;
@@ -38,8 +41,7 @@ export default function SettingsScreen(){
           <Text style={{fontFamily: arFont(st), fontSize: st.arSize, lineHeight: Math.round(st.arSize * 2.1), color: t.text, textAlign: 'right', includeFontPadding: false}}>
             {arText(sample, st)} <Text style={{fontFamily: F.uth, color: t.mark}}>{endMark(2)}</Text>
           </Text>
-          {st.showUr && <Text style={{fontFamily: F.ur, fontSize: st.trSize + 3, lineHeight: Math.round((st.trSize + 3) * 2.2), color: t.text, textAlign: 'right', includeFontPadding: false}}>{sample.ur}</Text>}
-          {st.showEn && <T size={st.trSize - 1} c={t.muted}>{sample.en}</T>}
+          <TransText s={1} ayah={sample} />
         </View>
 
         <View style={card}>
@@ -54,13 +56,28 @@ export default function SettingsScreen(){
             <T size={15} w="m">Word meanings in</T>
             <View style={{width: 160}}><Segmented value={st.wbwLang} onChange={v => set({wbwLang: v})} options={[{v: 'ur', label: 'Urdu'}, {v: 'en', label: 'English'}]} /></View>
           </View>}
-          {toggle('Urdu translation', 'Fateh Muhammad Jalandhry', 'showUr')}
-          {toggle('English translation', 'Saheeh International', 'showEn', true)}
+        </View>
+
+        <View style={card}>
+          <T size={15} w="m" style={{paddingTop: 12}}>Translations</T>
+          <T size={12} c={t.muted} style={{paddingBottom: 6}}>Shown under each ayah in the order you pick them. Jalandhry and Saheeh International are inside the app; the others download a surah at a time and then work offline.</T>
+          {([['ur', 'Urdu'], ['en', 'English']] as const).map(([lang, label]) => <View key={lang}>
+            <T size={11} w="sb" c={t.brand} style={{letterSpacing: 1, paddingTop: 10, paddingBottom: 2}}>{label.toUpperCase()}</T>
+            {meta.translations.filter(x => x.lang === lang).map(x => {
+              const i = st.trans.indexOf(x.id);
+              return (
+                <Pressable key={x.id} onPress={() => flipTr(x.id)} style={[row, {minHeight: 48}]}>
+                  <T size={15} style={{flex: 1}}>{x.english}</T>
+                  {i >= 0 && <View style={{minWidth: 24, height: 24, borderRadius: 12, backgroundColor: t.brand, alignItems: 'center', justifyContent: 'center'}}><T size={12} w="b" c={t.onBrand}>{i + 1}</T></View>}
+                </Pressable>
+              );
+            })}
+          </View>)}
         </View>
 
         <View style={card}>
           <T size={15} w="m" style={{paddingTop: 12, paddingBottom: 6}}>Reciter</T>
-          {RECITERS.map(r => (
+          {meta.reciters.map(r => (
             <Pressable key={r.id} onPress={() => set({reciter: r.id})} style={[row, {minHeight: 48}]}>
               <T size={15} style={{flex: 1}}>{r.name}</T>
               {st.reciter === r.id && <Icon name="check" size={20} color={t.brand} stroke={2.4} />}

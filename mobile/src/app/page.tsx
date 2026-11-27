@@ -9,10 +9,10 @@ import {StatusBar} from 'expo-status-bar';
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, FlatList, Pressable, ScrollView, Text, View, type GestureResponderEvent, type ListViewToken} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {arFont, arText} from '@/components/AyahCard';
+import {arFont, arText, TransText} from '@/components/AyahCard';
 import JustifiedRtl from '@/components/JustifiedRtl';
 import {Icon, T, TopBar} from '@/components/ui';
-import {ayahNow, endMark, FATIHAH, PAGE_COUNT, pageOf, pageRuns, surahInfo, usePage, uthBody, type Ayah} from '@/lib/data';
+import {ayahNow, endMark, FATIHAH, PAGE_COUNT, pageRuns, surahInfo, usePage, uthBody, type Ayah} from '@/lib/data';
 import {openAyah} from '@/lib/nav';
 import {usePlayer} from '@/lib/player';
 import {useApp, type Settings} from '@/lib/store';
@@ -69,17 +69,21 @@ const PageView = memo(function PageView({page, st, t, sel, onSel, onTap}:
 
 /** The selected ayah's translation, in a panel docked at the bottom; the ayah itself stays highlighted on the page above. */
 function TranslationPanel({s, a, ayah, h, bottom, t}: {s: number; a: number; ayah: Ayah; h: number; bottom: number; t: Theme}){
+  const {isMarked, toggleMark} = useApp(), marked = isMarked(s, a);
   return (
     <View style={{position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: h * PANEL, padding: 16, paddingBottom: bottom + 12, gap: 6,
       borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: t.player,
       elevation: 12, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: {width: 0, height: -4}}}>
       <View style={{flexDirection: 'row', alignItems: 'center'}}>
         <T size={12} w="sb" c="#f4c04e" style={{flex: 1}}>{surahInfo(s).en} {s}:{a}</T>
+        <Pressable accessibilityLabel={marked ? 'Remove bookmark' : 'Bookmark'} onPress={() => toggleMark(s, a)} style={{width: 36, height: 32, alignItems: 'center', justifyContent: 'center'}}>
+          <Icon name="bookmark" size={18} color={marked ? '#f4c04e' : t.heroMuted} fill={marked ? '#f4c04e' : undefined} />
+        </Pressable>
         <Pressable onPress={() => openAyah(s, a)} style={{paddingHorizontal: 8, height: 32, justifyContent: 'center'}}><T size={13} w="sb" c={t.heroMuted}>Open in reader</T></Pressable>
         <Pressable onPress={() => router.push({pathname: '/tafseer', params: {s, a}})} style={{paddingHorizontal: 8, height: 32, justifyContent: 'center'}}><T size={13} w="sb" c={t.heroMuted}>Tafseer ›</T></Pressable>
       </View>
       <ScrollView style={{flexGrow: 0}}>
-        <Text style={{fontFamily: F.ur, fontSize: 18, lineHeight: 40, color: t.playerText, textAlign: 'right', includeFontPadding: false}}>{ayah.ur}</Text>
+        <TransText s={s} ayah={ayah} color={t.playerText} muted={t.heroMuted} size={15} />
       </ScrollView>
     </View>
   );
@@ -96,14 +100,14 @@ function useStayAwake(){
 
 export default function MushafPage(){
   useStayAwake();
-  const {t, settings: st, history, setImmersive, tips, tipSeen} = useApp();
+  const {t, settings: st, mushaf, readPage, setImmersive, tips, tipSeen} = useApp();
   const player = usePlayer();
   const insets = useSafeAreaInsets();
   const {p} = useLocalSearchParams<{p?: string}>();
   const all = useMemo(() => Array.from({length: PAGE_COUNT}, (_, i) => i + 1), []);
   const list = useRef<FlatList<number>>(null);
-  // Open at the asked-for page, else where the reader left off
-  const startPage = p ? +p : history[0] ? pageOf(history[0].s, history[0].a) : 1;
+  // Open at the asked-for page, else the last Mushaf page read (kept apart from the reader's place)
+  const startPage = p ? +p : mushaf?.p ?? 1;
   const startIdx = Math.min(PAGE_COUNT, Math.max(1, startPage)) - 1;
   const [idx, setIdx] = useState(startIdx);
   // The long-pressed ayah ("s:a"), whose translation shows in the bottom panel
@@ -119,6 +123,7 @@ export default function MushafPage(){
   const [target, setTarget] = useState(startIdx);
   if (target !== startIdx){ setTarget(startIdx); setIdx(startIdx); setBase(startIdx); setSel(''); setDragged(false); }
   const page = all[idx], [ps, pa] = pageRuns(page)[0] ?? [1, 1];
+  useEffect(() => { readPage(page); }, [page, readPage]);
   // The selected ayah is on screen, so its surah is already in memory
   const [ss, sa] = sel.split(':').map(Number), chosen = ss ? ayahNow(ss, sa) : undefined;
   // The page at the top of the screen is the current page (FlatList needs this callback to stay the same function)

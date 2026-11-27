@@ -20,11 +20,43 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.connectingquran.app",
-      "versionCode": 2,
+      "versionCode": 4,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.connectingquran.com",
+              "pathPrefix": "/surah"
+            },
+            {
+              "scheme": "https",
+              "host": "www.connectingquran.com",
+              "pathPrefix": "/tafseer"
+            },
+            {
+              "scheme": "https",
+              "host": "www.connectingquran.com",
+              "pathPrefix": "/mushaf"
+            },
+            {
+              "scheme": "https",
+              "host": "www.connectingquran.com",
+              "pathPrefix": "/juz"
+            }
+          ]
+        }
       ]
     },
     "web": {

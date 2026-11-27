@@ -2,6 +2,7 @@
 import {router} from 'expo-router';
 import {memo} from 'react';
 import {Pressable, Text, View} from 'react-native';
+import {useTranslations} from '@/lib/api';
 import {BASE, endMark, gapMarks, uthBody, wordTokens, type Ayah} from '@/lib/data';
 import {useApp, type Settings} from '@/lib/store';
 import {F, type Theme} from '@/lib/theme';
@@ -44,6 +45,20 @@ export function ArabicText({s, ayah, st, t, color}: {s: number; ayah: Ayah; st: 
   );
 }
 
+/**
+ * The reader's chosen translations of one ayah, in their order: right-to-left ones (Urdu) in Nastaliq, the others in
+ * Inter. A translation that isn't on the phone yet shows a short line while it downloads.
+ */
+export function TransText({s, ayah, color, muted, size}: {s: number; ayah: Ayah; color?: string; muted?: string; size?: number}){
+  const {t, settings: st} = useApp();
+  const lines = useTranslations(s, st.trans)(ayah), z = size ?? st.trSize;
+  return <>{lines.map(l => l.text != null
+    ? l.dir === 'rtl'
+      ? <Text key={l.id} style={{fontFamily: F.ur, fontSize: z + 3, lineHeight: Math.round((z + 3) * 2.2), color: color ?? t.text, writingDirection: 'rtl', textAlign: 'right', includeFontPadding: false}}>{l.text}</Text>
+      : <T key={l.id} size={z - 1} c={muted ?? t.muted} style={{lineHeight: Math.round((z - 1) * 1.55)}}>{l.text}</T>
+    : <T key={l.id} size={12.5} c={muted ?? t.muted} style={l.dir === 'rtl' ? {textAlign: 'right'} : undefined}>{l.failed ? 'This translation needs a connection the first time.' : 'Loading translation…'}</T>)}</>;
+}
+
 type Props = {s: number; ayah: Ayah; playing: boolean; marked: boolean; onPlay: (a: number) => void};
 export const AyahCard = memo(function AyahCard({s, ayah, playing, marked, onPlay}: Props){
   const {t, settings: st, toggleMark} = useApp();
@@ -74,8 +89,7 @@ export const AyahCard = memo(function AyahCard({s, ayah, playing, marked, onPlay
         </Pressable>
       </View>
       <ArabicText s={s} ayah={ayah} st={st} t={t} />
-      {st.showUr && <Text style={{fontFamily: F.ur, fontSize: st.trSize + 3, lineHeight: Math.round((st.trSize + 3) * 2.2), color: t.text, writingDirection: 'rtl', textAlign: 'right', includeFontPadding: false}}>{ayah.ur}</Text>}
-      {st.showEn && <T size={st.trSize - 1} c={t.muted} style={{lineHeight: Math.round((st.trSize - 1) * 1.55)}}>{ayah.en}</T>}
+      <TransText s={s} ayah={ayah} />
     </Pressable>
   );
 });

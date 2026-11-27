@@ -11,7 +11,7 @@ export default function Tafseer(){
   return (
     <View style={{flex: 1, backgroundColor: t.bg}}>
       <TopBar title="Tafseer" />
-      <TafseerView s={+s} a={+a} top={8} onStep={x => router.setParams({a: String(x)})} />
+      <TafseerView s={+s} a={+a} top={4} onGo={(ns, na) => router.setParams({s: String(ns), a: String(na)})} />
     </View>
   );
 }

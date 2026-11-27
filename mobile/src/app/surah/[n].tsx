@@ -1,8 +1,13 @@
-/** Surah reader: ayah cards, follows the reciter, remembers the reading place. */
+/**
+ * Surah reader: ayah cards, follows the reciter, remembers the reading place. The list starts at the opened ayah, so
+ * it shows at once (ayah heights aren't known in advance, so scrolling to it was slow and landed a little off); the
+ * ayahs before it are added above as the reader scrolls up.
+ */
 import {router, useLocalSearchParams} from 'expo-router';
-import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, FlatList, Pressable, Text, View, type ListViewToken} from 'react-native';
 import {arFont, AyahCard} from '@/components/AyahCard';
+import GoToAyah from '@/components/GoToAyah';
 import {Icon, IconBtn, T, TopBar} from '@/components/ui';
 import {FATIHAH, surahInfo, useSurah, uthBody, type Ayah} from '@/lib/data';
 import {usePlayer} from '@/lib/player';
@@ -23,12 +28,17 @@ function Reader({s, start}: {s: number; start: number}){
   const info = surahInfo(s);
   const playingHere = p.cur?.s === s ? p.cur.a : 0;
 
+  const [picking, setPicking] = useState(false);
+  // The first ayah in the list; earlier ones are added once the reader drags (a list opened mid-surah is "at its start")
+  const [base, setBase] = useState(Math.max(0, start - 1));
+  const [dragged, setDragged] = useState(false);
+  const shown = useMemo(() => ayahs.slice(base), [ayahs, base]);
   const goTo = useCallback((ay: number, animated = true) => {
-    if (ay > 0 && ay <= ayahs.length) list.current?.scrollToIndex({index: ay - 1, animated, viewPosition: 0.1});
-  }, [ayahs.length]);
-  // Jump to the asked-for ayah once the surah has loaded
-  useEffect(() => { if (loaded && start > 1) setTimeout(() => goTo(start, false), 50); }, [!!loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Follow the reciter
+    if (ay - 1 < base || ay > ayahs.length) return;
+    list.current?.scrollToIndex({index: ay - 1 - base, animated, viewPosition: 0.1});
+  }, [ayahs.length, base]);
+  // Follow the reciter (a recitation stepped back above the list's start moves the start up to it, during render)
+  if (st.follow && playingHere && playingHere - 1 < base) setBase(playingHere - 1);
   useEffect(() => { if (st.follow && playingHere) goTo(playingHere); }, [playingHere]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The first ayah on screen is the reading place
@@ -55,19 +65,23 @@ function Reader({s, start}: {s: number; start: number}){
 
   return (
     <View style={{flex: 1, backgroundColor: t.bg}}>
-      <TopBar title={info.en} sub={`Juz ${ayahs[0]?.j} · Page ${ayahs[0]?.p} · ${info.rev}`} right={<>
+      <TopBar title={info.en} onTitle={() => setPicking(true)} sub={`Juz ${ayahs[0]?.j} · Page ${ayahs[0]?.p} · ${info.rev}`} right={<>
         <IconBtn name="headphones" label="Open player" onPress={() => { if (!p.cur) p.play(s, 1); router.push('/player'); }} />
         <Pressable accessibilityLabel="Text and translation settings" onPress={() => router.push('/settings')} style={{width: 44, height: 44, alignItems: 'center', justifyContent: 'center'}}>
           <T size={16} w="sb">Aa</T>
         </Pressable>
       </>} />
-      <FlatList ref={list} data={ayahs} keyExtractor={x => String(x.a)} ListHeaderComponent={header}
+      <FlatList ref={list} data={shown} keyExtractor={x => String(x.a)} ListHeaderComponent={base === 0 ? header : undefined}
+        onScrollBeginDrag={() => { if (!dragged) setDragged(true); }}
+        onStartReached={() => { if (dragged && base > 0) setBase(b => Math.max(0, b - 15)); }} onStartReachedThreshold={1}
+        maintainVisibleContentPosition={{minIndexForVisible: 0}}
         ListEmptyComponent={<ActivityIndicator color={t.brand} style={{padding: 40}} />}
         renderItem={({item}) => <AyahCard s={s} ayah={item} playing={item.a === playingHere} marked={markedSet.has(item.a)} onPlay={onPlay} />}
         extraData={[playingHere, markedSet, st]} initialNumToRender={8} windowSize={9} removeClippedSubviews
         onViewableItemsChanged={onViewable} viewabilityConfig={{itemVisiblePercentThreshold: 40}}
-        onScrollToIndexFailed={e => { list.current?.scrollToOffset({offset: e.averageItemLength * e.index, animated: false}); setTimeout(() => goTo(e.index + 1, false), 120); }}
+        onScrollToIndexFailed={e => { list.current?.scrollToOffset({offset: e.averageItemLength * e.index, animated: false}); setTimeout(() => goTo(base + e.index + 1, false), 120); }}
         contentContainerStyle={{paddingBottom: 24}} />
+      <GoToAyah visible={picking} s={s} a={start} onPick={(ns, na) => router.setParams({n: String(ns), a: String(na)})} onClose={() => setPicking(false)} />
     </View>
   );
 }

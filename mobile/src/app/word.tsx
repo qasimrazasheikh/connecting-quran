@@ -6,11 +6,11 @@ import {ActivityIndicator, Pressable, ScrollView, Text, View} from 'react-native
 import {arFont, arText} from '@/components/AyahCard';
 import {Badge, Btn, Sheet, T} from '@/components/ui';
 import {surahInfo, useMorph, useSurah, wordTokens, type Ayah, type Morph} from '@/lib/data';
+import {wordAudio} from '@/lib/api';
 import {describeSeg} from '@/lib/grammar';
 import {useApp} from '@/lib/store';
 import {F} from '@/lib/theme';
 
-const p3 = (n: number) => String(n).padStart(3, '0');
 
 /** The surah and its grammar load first (they are usually already in memory from the reader). */
 export default function WordCard(){
@@ -27,7 +27,7 @@ function WordDetails({s, a, i, ayah, morph}: {s: number; a: number; i: number; a
   // The reader highlights this word while the card is open; clear it when the card closes
   useEffect(() => () => setWord(''), [setWord]);
   const shown = wordTokens(arText(ayah, st), ayah.w.length)?.[i] ?? w.ip;
-  const audio = useAudioPlayer(`https://audio.qurancdn.com/wbw/${p3(s)}_${p3(a)}_${p3(i + 1)}.mp3`);
+  const audio = useAudioPlayer(wordAudio(s, a, i + 1));
 
   const segs = useMemo(() => (morph[`${a}:${i + 1}`] ?? []).map(([text, pos, tags]) => describeSeg({text, pos, tags: tags.split('|')})), [morph, a, i]);
   // The stem is the segment that carries the root (or the last one); prefixes and suffixes are listed after it

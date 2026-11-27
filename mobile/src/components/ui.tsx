@@ -106,18 +106,21 @@ export function TabHeader({title}: {title: string}){
   );
 }
 
-/** Back button + title for pushed screens. */
-export function TopBar({title, sub, right}: {title: string; sub?: string; right?: ReactNode}){
+/** Back button + title for pushed screens; with `onTitle` the title is a button (with a ▾) that opens a picker. */
+export function TopBar({title, sub, right, onTitle}: {title: string; sub?: string; right?: ReactNode; onTitle?: () => void}){
   const {t} = useApp();
   const insets = useSafeAreaInsets();
   return (
     <View style={{paddingTop: insets.top + 4, paddingHorizontal: 6, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 2,
       backgroundColor: t.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.line}}>
       <IconBtn name="back" label="Back" onPress={() => router.back()} />
-      <View style={{flex: 1}}>
-        <T size={17} w="b" lines={1}>{title}</T>
+      <Pressable disabled={!onTitle} accessibilityLabel={onTitle ? `${title}, choose surah and ayah` : undefined} onPress={onTitle} style={{flex: 1}}>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+          <T size={17} w="b" lines={1} style={{flexShrink: 1}}>{title}</T>
+          {onTitle && <Icon name="down" size={18} color={t.brand} stroke={2.2} />}
+        </View>
         {sub ? <T size={12} c={t.muted}>{sub}</T> : null}
-      </View>
+      </Pressable>
       {right}
     </View>
   );

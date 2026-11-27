@@ -5,7 +5,8 @@ import {useState} from 'react';
 import {ActivityIndicator, Pressable, Share, Text, View} from 'react-native';
 import {arFont, arText} from '@/components/AyahCard';
 import {Badge, Icon, Sheet, T, type IconName} from '@/components/ui';
-import {endMark, SITE, surahInfo, useSurah, type Ayah} from '@/lib/data';
+import {SITE, useTranslations} from '@/lib/api';
+import {endMark, surahInfo, useSurah, type Ayah} from '@/lib/data';
 import {usePlayer} from '@/lib/player';
 import {useApp} from '@/lib/store';
 import {F} from '@/lib/theme';
@@ -22,7 +23,8 @@ function ActionList({s, a, ayah}: {s: number; a: number; ayah: Ayah}){
   const {t, settings: st, isMarked, toggleMark, setWord} = useApp();
   const p = usePlayer();
   const info = surahInfo(s);
-  const text = `${arText(ayah, st)}\n\n${ayah.ur}\n\n${ayah.en}\n\n${info.en} ${s}:${a} · ${SITE}/surah/${s}/${a}`;
+  const lines = useTranslations(s, st.trans)(ayah).map(l => l.text).filter(Boolean);
+  const text = `${arText(ayah, st)}\n\n${lines.map(l => l + '\n\n').join('')}${info.en} ${s}:${a} · ${SITE}/surah/${s}/${a}`;
   const go = (fn: () => void) => () => { router.back(); fn(); };
   const [copied, setCopied] = useState(false);
 
