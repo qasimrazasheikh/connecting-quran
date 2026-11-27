@@ -4,7 +4,7 @@ import {API, REVALIDATE} from './config';
 import {catalogTafsirs, linkTafsirs} from './catalog';
 import {nativeName} from './tafsir-names';
 import {EQL_EN} from './eql-sources';
-import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, type TafsirEdition, type TransEdition} from './meta';
+import {FALLBACK_TAFSIR, FALLBACK_TRANS, QE_EDITION, QE_SLUG, TAFSIR_HIDE, TAFSIR_RENAME, TRANS_HIDE, type TafsirEdition, type TransEdition} from './meta';
 import {SURAHS} from './surahs';
 import {cleanIP, fixTanzil, type QWord} from './text';
 
@@ -63,7 +63,7 @@ export async function getSurahList(): Promise<SurahInfo[]> { return SURAHS; }
 export async function getTransEditions(): Promise<TransEdition[]> {
   try{
     const d = await cloudJSON<{data: TransEdition[]}>('/edition?format=text&type=translation');
-    const list = d.data.filter(e => e.language === 'ur' || e.language === 'en');
+    const list = d.data.filter(e => (e.language === 'ur' || e.language === 'en') && !TRANS_HIDE.has(e.identifier));
     return list.length ? list : FALLBACK_TRANS;
   }catch{ return FALLBACK_TRANS; }
 }

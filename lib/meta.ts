@@ -59,6 +59,8 @@ export const googleTranslateUrl = (t: string, l: string) => `https://translate.g
 export const TJ_RULES: [string, string, string][] = [['h','Hamzat al-wasl (silent)','همزة الوصل'],['l','Lām shamsiyyah (silent)','لام شمسية'],['s','Silent letter','حرف ساكت'],['n','Madd — 2 counts','مد طبيعي'],['p','Madd — 2, 4 or 6 counts','مد جائز'],['o','Madd — 4–5 counts','مد واجب'],['m','Madd — 6 counts','مد لازم'],['q','Qalqalah','قلقلة'],['g','Ghunnah','غنة'],['f','Ikhfāʾ','إخفاء'],['c','Ikhfāʾ shafawī','إخفاء شفوي'],['i','Iqlāb','إقلاب'],['a','Idghām with ghunnah','إدغام بغنة'],['u','Idghām without ghunnah','إدغام بلا غنة'],['w','Idghām shafawī','إدغام شفوي'],['d','Idghām mutajānisayn','إدغام متجانسين'],['b','Idghām mutaqāribayn','إدغام متقاربين']];
 
 export type TransEdition = {identifier: string; language: string; englishName: string; name?: string; direction?: string};
+/** Translations left out of every list (curation policy: no Shia sources). Saved settings naming them are dropped too. */
+export const TRANS_HIDE = new Set(['ur.jawadi', 'ur.najafi', 'en.qarai', 'en.shakir', 'en.sarwar']);
 export const FALLBACK_TRANS: TransEdition[] = [
   {identifier:'ur.jalandhry',language:'ur',englishName:'Fateh Muhammad Jalandhry',direction:'rtl'},
   {identifier:'ur.junagarhi',language:'ur',englishName:'Muhammad Junagarhi',direction:'rtl'},

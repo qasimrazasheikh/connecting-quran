@@ -1,10 +1,11 @@
 import {cookies} from 'next/headers';
+import {TRANS_HIDE} from './meta';
 import {COOKIE, DEFAULT_SETTINGS, parseSettings, type Settings} from './settings';
 /** Reader settings from the cookie, checked so nothing odd reaches an external URL. */
 export async function readSettings(): Promise<{settings: Settings; hasCookie: boolean}> {
   const raw = (await cookies()).get(COOKIE)?.value;
   const s = parseSettings(raw);
-  const trans = Array.isArray(s.trans) ? s.trans.filter(t => typeof t === 'string' && /^[a-z]{2,3}\.[a-z0-9_-]+$/i.test(t)).slice(0, 4) : DEFAULT_SETTINGS.trans;
+  const trans = Array.isArray(s.trans) ? s.trans.filter(t => typeof t === 'string' && /^[a-z]{2,3}\.[a-z0-9_-]+$/i.test(t) && !TRANS_HIDE.has(t)).slice(0, 4) : DEFAULT_SETTINGS.trans;
   const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && v >= lo && v <= hi ? v : d);
   return {
     hasCookie: !!raw,
